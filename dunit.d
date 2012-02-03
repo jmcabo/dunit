@@ -2,10 +2,42 @@ module dunit;
 
 import std.stdio;
 
+//To_Do:
+//@factory method
+//@switch(testmethodName) { case "test1": refObj.test1(); }
+//@register: struct {className, factoryMethodPointer, runMethodPointer}
+//.fixtureSetup
+//.fixtureTeardown
+//.setup
+//.tearDown
+//.unittest that derive unittests.
+//.var names that start with 'test'.
+//.'test' methods with arguments.
+//.'test' methods with overloads.
+//.Q: call tearDownClass anyways if a test fails?
+//.Q: call tearDown anyways if a test fails?
+
+
+
 string[] testClasses;
 string[][string] testNamesByClass;
 void function(Object o, string testName)[string] testCallers;
 Object function()[string] testCreators;
+
+public static void assertEquals(string s, string t, 
+        string file = __FILE__, 
+        size_t line = __LINE__)
+{
+    if (s is t) {
+        return;
+    }
+    if (s != t) {
+        throw new core.exception.AssertError(
+                "Expected: '"~s~"', but was: '"~t~"'",
+                file, line);
+    }
+}
+
 
 public static void runTests() {
     //List Test classes:
@@ -24,14 +56,48 @@ public static void runTests() {
             continue;
         }
 
+        //setUpClass
+        try {
+            testCallers[className](testObject, "setUpClass");
+        } catch (Throwable t) {
+            writeln("        ERROR IN setUpClass: " ~ className ~ ".setUpClass(): " ~ t.toString());
+        }
+
         //Run each test of the class:
         foreach (string testName; testNamesByClass[className]) {
+            //setUp
+            bool setUpOk = false;
+            try {
+                testCallers[className](testObject, "setUp");
+                setUpOk = true;
+            } catch (Throwable t) {
+                writeln("        ERROR: " ~ testName ~ "(): " ~ t.toString());
+            }
+            if (!setUpOk) {
+                continue;
+            }
+
+            //test
             try {
                 testCallers[className](testObject, testName);
                 writeln("        OK: " ~ testName ~ "()");
             } catch (Throwable t) {
+                writeln("        FAILED: " ~ testName ~ "(): " ~ t.toString());
+            }
+
+            //tearDown (call anyways if test failed)
+            try {
+                testCallers[className](testObject, "tearDown");
+            } catch (Throwable t) {
                 writeln("        ERROR: " ~ testName ~ "(): " ~ t.toString());
             }
+        }
+
+        //tearDownClass
+        try {
+            testCallers[className](testObject, "tearDownClass");
+        } catch (Throwable t) {
+            writeln("        ERROR IN tearDownClass: " ~ className ~ ".tearDownClass(): " ~ t.toString());
         }
     }
 }
@@ -70,22 +136,9 @@ public static T _createClassObject(T)() {
 mixin template TestMixin() {
 
     public static this() {
-
         //Names of test methods:
-        immutable t = __traits(derivedMembers, __traits(parent, _testClass_));
+        immutable t = __traits(allMembers, __traits(parent, _testClass_));
         immutable(string[]) _testMethods = _testMethodsArray(t);
-
-        //@factory method
-        //@switch(testmethodName) { case "test1": refObj.test1(); }
-        //@register: struct {className, factoryMethodPointer, runMethodPointer}
-        //.fixtureSetup
-        //.fixtureTeardown
-        //.setup
-        //.tearDown
-        //.unittest that derive unittests.
-        //.var names that start with 'test'.
-        //.'test' methods with arguments.
-        //.'test' methods with overloads.
 
         //Factory method:
         static Object createFunction() { 
@@ -125,7 +178,12 @@ mixin template TestMixin() {
         }
 
         //Skip method names that don't start with 'test':
-        if (args[0].length < 4 || args[0][0..4] != "test") {
+        if ((args[0].length < 4 || args[0][0..4] != "test") 
+            && (args[0].length < 5 || args[0][0..5] != "setUp")
+            && (args[0].length < 8 || args[0][0..8] != "tearDown")
+            && (args[0].length < 10 || args[0][0..10] != "setUpClass")
+            && (args[0].length < 13 || args[0][0..13] != "tearDownClass"))
+        {
             static if (args.length == 1) {
                 return "";
             } else {
