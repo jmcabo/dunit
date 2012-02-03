@@ -8,6 +8,11 @@ class TestBase {
 }
 
 class AbcTest : TestBase {
+    mixin TestMixin;
+
+	public int testN = 3;
+	public int testM = 4;
+
     public this() {
         //writeln("AbcTest constructor run", );
     }
@@ -17,11 +22,17 @@ class AbcTest : TestBase {
     public void test2() {
         //writeln("test2 run");
     }
-
-    mixin TestMixin;
+    private void test5(int a=4) {
+        writeln("test5-1 run");
+    }
+    public void test5(int a=4, int b=3) {
+        writeln("test5-2 run");
+    }
 }
 
 class BcdTest : AbcTest {
+    mixin TestMixin;
+
     public this() {
         //writeln("BcdTest constructor run", );
     }
@@ -48,17 +59,16 @@ class BcdTest : AbcTest {
         //int b = 5;
         //writeln(a[b]);
     }
+
     public void test4() {
         assert(false);
     }
-
-    mixin TestMixin;
+    public override void test2() {
+        writeln("bcdtest2 run");
+    }
 }
 
 int main (string[] args) {
-    writeln("");
-    (new AbcTest()).test1();
-
     assert(typeid(AbcTest).name == "Main.AbcTest");
     assert(AbcTest.stringof == "AbcTest");
 

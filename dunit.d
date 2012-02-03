@@ -1,22 +1,46 @@
+/** Unit testing framework ('dunit')
+ *
+ * Allows to define unittests simply as methods which names start
+ * with 'test'.
+ * The only thing necessary to create a unit test class, is to
+ * declare the mixin TestMixin inside the class. This will register
+ * the class and its test methods for the test runner.
+ *
+ * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
+ * Authors:   Juan Manuel Cabo
+ * Source:    dunit.d
+ */
+/*          Copyright Juan Manuel Cabo 2012.
+ * Distributed under the Boost Software License, Version 1.0.
+ *    (See accompanying file LICENSE_1_0.txt or copy at
+ *          http://www.boost.org/LICENSE_1_0.txt)
+ */
+
 module dunit;
 
 import std.stdio;
 
-//To_Do:
-//@factory method
-//@switch(testmethodName) { case "test1": refObj.test1(); }
-//@register: struct {className, factoryMethodPointer, runMethodPointer}
-//.fixtureSetup
-//.fixtureTeardown
-//.setup
-//.tearDown
-//.unittest that derive unittests.
-//.var names that start with 'test'.
-//.'test' methods with arguments.
-//.'test' methods with overloads.
-//.Q: call tearDownClass anyways if a test fails?
-//.Q: call tearDown anyways if a test fails?
+/*
+To_Do:
 
+    @factory method
+    @switch(testmethodName) { case "test1": refObj.test1(); }
+    @register: struct {className, factoryMethodPointer, runMethodPointer}
+    @fixtureSetup
+    @fixtureTeardown
+    @setup
+    @tearDown
+    @unittest that derive unittests.
+    @var names that start with 'test'.
+    @'test' methods with arguments.
+    @'test' methods with overloads: only the first one is called
+    @'test' methods that are private or protected: can be private/protected, it is run anyways.
+    .Q: call tearDownClass anyways if a test fails?
+    .Q: call tearDown anyways if a test fails?
+    .list the kinds of asserts in classic unit test frameworks.
+    .version unittests
+    .ui
+*/
 
 
 string[] testClasses;
@@ -39,6 +63,9 @@ public static void assertEquals(string s, string t,
 }
 
 
+/**
+ * Runs all the unit tests.
+ */
 public static void runTests() {
     //List Test classes:
     writeln("Unit tests: ");
@@ -50,7 +77,8 @@ public static void runTests() {
         try {
             testObject = testCreators[className]();
         } catch (Throwable t) {
-            writeln("        ERROR IN CONSTRUCTOR: " ~ className ~ ".this(): " ~ t.toString());
+            writefln("        ERROR IN CONSTRUCTOR: " ~ className ~ ".this(): " 
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
         }
         if (testObject is null) {
             continue;
@@ -60,7 +88,8 @@ public static void runTests() {
         try {
             testCallers[className](testObject, "setUpClass");
         } catch (Throwable t) {
-            writeln("        ERROR IN setUpClass: " ~ className ~ ".setUpClass(): " ~ t.toString());
+            writefln("        ERROR IN setUpClass: " ~ className ~ ".setUpClass(): " 
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
         }
 
         //Run each test of the class:
@@ -71,7 +100,8 @@ public static void runTests() {
                 testCallers[className](testObject, "setUp");
                 setUpOk = true;
             } catch (Throwable t) {
-                writeln("        ERROR: " ~ testName ~ "(): " ~ t.toString());
+                writefln("        ERROR: setUp"
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
             }
             if (!setUpOk) {
                 continue;
@@ -80,16 +110,18 @@ public static void runTests() {
             //test
             try {
                 testCallers[className](testObject, testName);
-                writeln("        OK: " ~ testName ~ "()");
+                writefln("        OK: " ~ testName ~ "()");
             } catch (Throwable t) {
-                writeln("        FAILED: " ~ testName ~ "(): " ~ t.toString());
+                writefln("        FAILED: " ~ testName 
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
             }
 
             //tearDown (call anyways if test failed)
             try {
                 testCallers[className](testObject, "tearDown");
             } catch (Throwable t) {
-                writeln("        ERROR: " ~ testName ~ "(): " ~ t.toString());
+                writefln("        ERROR: tearDown" 
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
             }
         }
 
@@ -97,60 +129,35 @@ public static void runTests() {
         try {
             testCallers[className](testObject, "tearDownClass");
         } catch (Throwable t) {
-            writeln("        ERROR IN tearDownClass: " ~ className ~ ".tearDownClass(): " ~ t.toString());
+            writefln("        ERROR IN tearDownClass: " ~ className ~ ".tearDownClass(): " 
+                    ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
         }
     }
 }
 
-public static immutable(string[]) _testMethodsArray(S...)(S args) pure nothrow {
-    static if (args.length == 0) {
-        return [];
-    }
 
-    //Skip strings that don't start with "test":
-    immutable str = args[0];
-    if (str.length < 4 || str[0..4] != "test") {
-        static if(args.length == 1) {
-            return [];
-        } else {
-            return _testMethodsArray(args[1..$]);
-        }
-    }
-
-    //Return the first argument and the rest:
-    static if (args.length == 1) {
-        return [args[0]];
-    } else {
-        static if (args.length > 1) {
-            return [args[0]] ~ _testMethodsArray(args[1..$]);
-        } else {
-            return [];
-        }
-    }
-}
-
-public static T _createClassObject(T)() {
-    return new T();
-}
-
+/**
+ * Registers a class as a unit test.
+ */
 mixin template TestMixin() {
-
     public static this() {
         //Names of test methods:
-        immutable t = __traits(allMembers, __traits(parent, _testClass_));
-        immutable(string[]) _testMethods = _testMethodsArray(t);
+        immutable(string[]) _testMethods = _testMethodsList!(
+                __traits(parent, _testClass_), 
+                __traits(allMembers, __traits(parent, _testClass_))
+        ).ret;
 
         //Factory method:
         static Object createFunction() { 
-            return _createClassObject!(__traits(parent, _testClass_))(); 
+            mixin("return (new " ~ __traits(parent, _testClass_).stringof ~ "());");
         }
 
         //Run method:
         //Generate a switch statement, that calls the method that matches the testName:
         static void runTest(Object o, string testName) {
             mixin(
-                genRunTest(__traits(parent, _testClass_).stringof, 
-                           __traits(derivedMembers, __traits(parent, _testClass_)))
+                generateRunTest!(__traits(parent, _testClass_),
+                                 __traits(allMembers, __traits(parent, _testClass_)))
             );
         }
 
@@ -161,41 +168,81 @@ mixin template TestMixin() {
         testCallers[className] = &runTest;
         testCreators[className] = &createFunction;
     }
-
-    /** Generates the function that runs a method from its name. */
-    private static string genRunTest(S...)(string s, S args) pure nothrow {
-        return 
-            s ~ " testObject = cast("~s~")o;"
-            ~"switch (testName) {"
-            ~genRunTestImpl(args)
-            ~"    default: break;"
-            ~"}";
-    }
-    /** Generates the case statements. */
-    private static string genRunTestImpl(S...)(S args) pure nothrow {
+ 
+    private template _testMethodsList(T, args...) {
         static if (args.length == 0) {
-            return "";
-        }
+            immutable(string[]) ret = [];
+        } else {
 
-        //Skip method names that don't start with 'test':
-        if ((args[0].length < 4 || args[0][0..4] != "test") 
-            && (args[0].length < 5 || args[0][0..5] != "setUp")
-            && (args[0].length < 8 || args[0][0..8] != "tearDown")
-            && (args[0].length < 10 || args[0][0..10] != "setUpClass")
-            && (args[0].length < 13 || args[0][0..13] != "tearDownClass"))
-        {
-            static if (args.length == 1) {
-                return "";
+            //Skip strings that don't start with "test":
+            static if (args[0].length < 4 || args[0][0..4] != "test"
+                  || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
+            {
+                static if(args.length == 1) {
+                    immutable(string[]) ret = [];
+                } else {
+                    immutable(string[]) ret = _testMethodsList!(T, args[1..$]).ret;
+                }
             } else {
-                return genRunTestImpl(args[1..$]);
+
+                //Return the first argument and the rest:
+                static if (args.length == 1) {
+                    immutable(string[]) ret = [args[0]];
+                } else {
+                    static if (args.length > 1) {
+                        immutable(string[]) ret = [args[0]] ~ _testMethodsList!(T, args[1..$]).ret;
+                    } else {
+                        immutable(string[]) ret = [];
+                    }
+                }
             }
         }
+    }
 
-        static if (args.length == 1) {
-            return "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break;";
+    /**
+     * Generates the function that runs a method from its name. 
+     */
+    private template generateRunTest(T, args...) {
+        immutable(string) generateRunTest = 
+            T.stringof ~ " testObject = cast("~T.stringof~")o; "
+            ~"switch (testName) { "
+            ~generateRunTestImpl!(T, args).ret
+            ~"    default: break; "
+            ~"}";
+    }
+
+    /** 
+     * Generates the case statements. 
+     */
+    private template generateRunTestImpl(T, args...) {
+        static if (args.length == 0) {
+            immutable(string) ret = "";
         } else {
-            return "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break;"
-                ~ genRunTestImpl(args[1..$]);
+            //Skip method names that don't start with 'test':
+            static if (((args[0].length < 4 || args[0][0..4] != "test") 
+                && (args[0].length < 5 || args[0][0..5] != "setUp")
+                && (args[0].length < 8 || args[0][0..8] != "tearDown")
+                && (args[0].length < 10 || args[0][0..10] != "setUpClass")
+                && (args[0].length < 13 || args[0][0..13] != "tearDownClass"))
+                || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
+            {
+                static if (args.length == 1) {
+                    immutable(string) ret = "";
+                } else {
+                    immutable(string) ret = generateRunTestImpl!(T, args[1..$]).ret;
+                }
+            } else {
+
+                //Create the case statement that calls that test:
+                static if (args.length == 1) {
+                    immutable(string) ret = 
+                        "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break; ";
+                } else {
+                    immutable(string) ret = 
+                        "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break; "
+                        ~ generateRunTestImpl!(T, args[1..$]).ret;
+                }
+            }
         }
     }
 
