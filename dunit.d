@@ -37,6 +37,7 @@ To_Do:
     @'test' methods that are private or protected: can be private/protected, it is run anyways.
     .Q: call tearDownClass anyways if a test fails?
     .Q: call tearDown anyways if a test fails?
+    .print exception trace the same as classic unit test?
     .list the kinds of asserts in classic unit test frameworks.
     .version unittests
     .ui
@@ -62,11 +63,178 @@ public static void assertEquals(string s, string t,
     }
 }
 
+mixin template DUnitMain() {
+    int main (string[] args) {
+        runTests();
+        return 0;
+    }
+}
 
 /**
  * Runs all the unit tests.
  */
 public static void runTests() {
+    runTests_Progress();
+    //debug: runTests_Tree();
+}
+
+/**
+ * Runs all the unit tests, showing progress dots, and the results at the end.
+ */
+public static void runTests_Progress() {
+    struct TestError {
+        string testClass;
+        string testName;
+        Throwable error;
+        bool isAssertError;
+
+        this(string tc, string tn, Throwable er) {
+            this.testClass = tc;
+            this.testName = tn;
+            this.error = er;
+            this.isAssertError = (typeid(er) is typeid(core.exception.AssertError));
+        }
+    }
+
+    TestError[] errors;
+    int testsRun = 0;
+
+    foreach (string className; testClasses) {
+        //Create the class:
+        Object testObject = null;
+        try {
+            testObject = testCreators[className]();
+            write("."); stdout.flush();
+        } catch (Throwable t) {
+            errors ~= TestError(className, "CONSTRUCTOR", t);
+            write("F"); stdout.flush();
+        }
+        if (testObject is null) {
+            continue;
+        }
+
+        //setUpClass
+        try {
+            testCallers[className](testObject, "setUpClass");
+        } catch (Throwable t) {
+            errors ~= TestError(className, "setUpClass", t);
+        }
+
+        //Run each test of the class:
+        foreach (string testName; testNamesByClass[className]) {
+            ++testsRun;
+
+            //setUp
+            bool setUpOk = false;
+            bool allOk = true;
+            try {
+                testCallers[className](testObject, "setUp");
+                setUpOk = true;
+            } catch (Throwable t) {
+                errors ~= TestError(className, "setUp", t);
+                write("F"); stdout.flush();
+            }
+            if (!setUpOk) {
+                continue;
+            }
+
+            //test
+            try {
+                testCallers[className](testObject, testName);
+            } catch (Throwable t) {
+                errors ~= TestError(className, testName, t);
+                allOk = false;
+            }
+
+            //tearDown (call anyways if test failed)
+            try {
+                testCallers[className](testObject, "tearDown");
+            } catch (Throwable t) {
+                errors ~= TestError(className, "tearDown", t);
+                allOk = false;
+            }
+
+            if (allOk) {
+                write("."); stdout.flush();
+            } else {
+                write("F"); stdout.flush();
+            }
+        }
+
+        //tearDownClass
+        try {
+            testCallers[className](testObject, "tearDownClass");
+        } catch (Throwable t) {
+            errors ~= TestError(className, "tearDownClass", t);
+        }
+    }
+    
+    /* Count how many problems where asserts, and how many other exceptions. 
+     */
+    int failedCount = 0;
+    int errorCount = 0;
+    foreach (TestError te; errors) {
+        if (te.isAssertError) {
+            ++failedCount;
+        } else {
+            ++errorCount;
+        }
+    }
+
+    /* Display results
+     */
+    writeln();
+    if (failedCount == 0 && errorCount == 0) {
+        writeln();
+        writefln("OK (%d Test%s)", testsRun, ((testsRun == 1) ? "" : "s"));
+        return;
+    }
+    /* Errors
+     */
+    if (errorCount == 1) {
+        writeln("There was 1 error:");
+    } else {
+        writefln("There were %d errors:", errorCount);
+    }
+    int i = 0;
+    foreach (TestError te; errors) {
+        //Errors are any exception except AssertError;
+        if (te.isAssertError) {
+            continue;
+        }
+        Throwable t = te.error;
+        writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
+                te.testName, te.testClass,
+                typeid(t).name, t.file, t.line, t.msg);
+    }
+    /* Failures
+     */
+    if (failedCount == 1) {
+        writeln("There was 1 failure:");
+    } else {
+        writefln("There were %d failures:", failedCount);
+    }
+    i = 0;
+    foreach (TestError te; errors) {
+        //Failures are only AssertError exceptions.
+        if (!te.isAssertError) {
+            continue;
+        }
+        Throwable t = te.error;
+        writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
+                te.testName, te.testClass,
+                typeid(t).name, t.file, t.line, t.msg);
+    }
+
+    writeln();
+    writeln("FAILURES!!!");
+    writefln("Tests run: %d,  Failures: %d,  Errors: %d", testsRun, failedCount, errorCount);
+}
+
+/**
+ * Runs all the unit tests, showing the test tree as the tests run.
+ */
+public static void runTests_Tree() {
     //List Test classes:
     writeln("Unit tests: ");
     foreach (string className; testClasses) {
