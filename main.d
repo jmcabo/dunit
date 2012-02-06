@@ -55,11 +55,11 @@ class BcdTest : AbcTest {
 
 		//assertEquals(null, "bcd");
 
-		//writeln("test3 run");
+		writeln("test3 run");
 
 		int[4] a = [1,3,3,3];
 		int b = 5;
-		//writeln(a[b]);
+		writeln(a[b]);
 	}
 
 	public void test4() {
@@ -69,12 +69,14 @@ class BcdTest : AbcTest {
 		//assert(false);
 	}
 	public override void test2() {
-		//writeln("bcdtest2 run");
+		writeln("bcdtest2 run");
 		assert(__traits(compiles, typeid(null)));
 		auto s = typeid(null);
-		assert(s is null);
+		//assert(s is null);
 	}
 }
+
+version = DUnit;
 
 version(DUnit) {
 
@@ -94,9 +96,6 @@ version(DUnit) {
 			assert(t.msg == "Assertion failure");
 		}
 
-		dunit.runTests();
-
-
 		return 0;
 	}
 
@@ -111,3 +110,5 @@ class DefTest {
 		//writeln("bla" , __VERSION__ , ";" ~ __VENDOR__);
 	}
 }
+
+

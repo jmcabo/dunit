@@ -8,6 +8,7 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
+ * Version:   0.1
  * Source:    dunit.d
  */
 /*          Copyright Juan Manuel Cabo 2012.
@@ -35,6 +36,7 @@ To_Do:
     @'test' methods with arguments.
     @'test' methods with overloads: only the first one is called
     @'test' methods that are private or protected: can be private/protected, it is run anyways.
+    .Encapsulate globals (testClasses, testNamesByClass, etc.)
     .Q: call tearDownClass anyways if a test fails?
     .Q: call tearDown anyways if a test fails?
     .print exception trace the same as classic unit test?
@@ -99,15 +101,16 @@ public static void runTests_Progress() {
     TestError[] errors;
     int testsRun = 0;
 
+    startDots();
+
     foreach (string className; testClasses) {
         //Create the class:
         Object testObject = null;
         try {
             testObject = testCreators[className]();
-            write("."); stdout.flush();
         } catch (Throwable t) {
             errors ~= TestError(className, "CONSTRUCTOR", t);
-            write("F"); stdout.flush();
+            printF();
         }
         if (testObject is null) {
             continue;
@@ -124,6 +127,8 @@ public static void runTests_Progress() {
         foreach (string testName; testNamesByClass[className]) {
             ++testsRun;
 
+			printDot();
+
             //setUp
             bool setUpOk = false;
             bool allOk = true;
@@ -132,7 +137,7 @@ public static void runTests_Progress() {
                 setUpOk = true;
             } catch (Throwable t) {
                 errors ~= TestError(className, "setUp", t);
-                write("F"); stdout.flush();
+                printF();
             }
             if (!setUpOk) {
                 continue;
@@ -154,10 +159,8 @@ public static void runTests_Progress() {
                 allOk = false;
             }
 
-            if (allOk) {
-                write("."); stdout.flush();
-            } else {
-                write("F"); stdout.flush();
+            if (!allOk) {
+                printF();
             }
         }
 
@@ -168,6 +171,8 @@ public static void runTests_Progress() {
             errors ~= TestError(className, "tearDownClass", t);
         }
     }
+
+    endDots();
     
     /* Count how many problems where asserts, and how many other exceptions. 
      */
@@ -186,49 +191,111 @@ public static void runTests_Progress() {
     writeln();
     if (failedCount == 0 && errorCount == 0) {
         writeln();
-        writefln("OK (%d Test%s)", testsRun, ((testsRun == 1) ? "" : "s"));
+        printOk();
+        writefln(" (%d Test%s)", testsRun, ((testsRun == 1) ? "" : "s"));
         return;
     }
     /* Errors
      */
-    if (errorCount == 1) {
-        writeln("There was 1 error:");
-    } else {
-        writefln("There were %d errors:", errorCount);
-    }
-    int i = 0;
-    foreach (TestError te; errors) {
-        //Errors are any exception except AssertError;
-        if (te.isAssertError) {
-            continue;
+    if (errorCount != 0) {
+        if (errorCount == 1) {
+            writeln("There was 1 error:");
+        } else {
+            writefln("There were %d errors:", errorCount);
         }
-        Throwable t = te.error;
-        writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
-                te.testName, te.testClass,
-                typeid(t).name, t.file, t.line, t.msg);
+        int i = 0;
+        foreach (TestError te; errors) {
+            //Errors are any exception except AssertError;
+            if (te.isAssertError) {
+                continue;
+            }
+            Throwable t = te.error;
+            writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
+                    te.testName, te.testClass,
+                    typeid(t).name, t.file, t.line, t.msg);
+        }
     }
     /* Failures
      */
-    if (failedCount == 1) {
-        writeln("There was 1 failure:");
-    } else {
-        writefln("There were %d failures:", failedCount);
-    }
-    i = 0;
-    foreach (TestError te; errors) {
-        //Failures are only AssertError exceptions.
-        if (!te.isAssertError) {
-            continue;
+    if (failedCount != 0) {
+        if (failedCount == 1) {
+            writeln("There was 1 failure:");
+        } else {
+            writefln("There were %d failures:", failedCount);
         }
-        Throwable t = te.error;
-        writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
-                te.testName, te.testClass,
-                typeid(t).name, t.file, t.line, t.msg);
+        int i = 0;
+        foreach (TestError te; errors) {
+            //Failures are only AssertError exceptions.
+            if (!te.isAssertError) {
+                continue;
+            }
+            Throwable t = te.error;
+            writefln("%d) %s(%s)%s@%s(%d): %s", ++i, 
+                    te.testName, te.testClass,
+                    typeid(t).name, t.file, t.line, t.msg);
+        }
     }
 
     writeln();
-    writeln("FAILURES!!!");
+    printFailures();
     writefln("Tests run: %d,  Failures: %d,  Errors: %d", testsRun, failedCount, errorCount);
+}
+
+version (linux) {
+    private static void startColorGreen() {
+        write("\x1B[1;37;42m"); stdout.flush();
+    }
+    private static void startColorRed() {
+        write("\x1B[1;37;41m"); stdout.flush();
+    }
+    private static void endColors() {
+        write("\x1B[0;;m"); stdout.flush();
+    }
+} else {
+    private static void startColorGreen() {
+    }
+    private static void startColorRed() {
+    }
+    private static void endColors() {
+    }
+}
+
+private static bool showingRed = false;
+private static void startDots() {
+    showingRed = false;
+}
+private static void printDot() {
+    //debug:
+    //if (showingRed) {
+        //startColorRed();
+    //} else {
+        //startColorGreen();
+    //}
+    startColorGreen(); //debug!
+    write("."); stdout.flush();
+    endColors();
+}
+private static void printF() {
+    if (!showingRed) {
+        showingRed = true;
+    }
+    startColorRed();
+    write("F"); stdout.flush();
+    endColors();
+}
+private static void endDots() {
+    showingRed = false;
+}
+private static void printOk() {
+    startColorGreen();
+    write("OK");
+    endColors();
+}
+private static void printFailures() {
+    startColorRed();
+    write("FAILURES!!!");
+    endColors();
+    writeln();
 }
 
 /**
