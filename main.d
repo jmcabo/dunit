@@ -74,6 +74,12 @@ class BcdTest : AbcTest {
 		auto s = typeid(null);
 		//assert(s is null);
 	}
+	public void testForeach() {
+		string[int] d = [3: "aa", 5: "bb"];
+		foreach(k, v; d) {
+			assertEquals(d[k], v);
+		}
+	}
 }
 
 version = DUnit;

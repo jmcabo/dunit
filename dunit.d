@@ -20,6 +20,7 @@
 module dunit;
 
 import std.stdio;
+import std.conv;
 
 /*
 To_Do:
@@ -61,6 +62,17 @@ public static void assertEquals(string s, string t,
     if (s != t) {
         throw new core.exception.AssertError(
                 "Expected: '"~s~"', but was: '"~t~"'",
+                file, line);
+    }
+}
+
+public static void assertEquals(int s, int t, 
+        string file = __FILE__, 
+        size_t line = __LINE__)
+{
+    if (s != t) {
+        throw new core.exception.AssertError(
+                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
                 file, line);
     }
 }
