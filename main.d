@@ -46,6 +46,7 @@ class BcdTest : AbcTest {
 	public void tearDown() {
 	}
 	public void test3() {
+		/*
 		assertEquals("abc", "abc");
 		//assertEquals("abc", "bcd");
 		string s = "aa";
@@ -60,6 +61,7 @@ class BcdTest : AbcTest {
 		int[4] a = [1,3,3,3];
 		int b = 5;
 		writeln(a[b]);
+		*/
 	}
 
 	public void test4() {
@@ -69,7 +71,7 @@ class BcdTest : AbcTest {
 		//assert(false);
 	}
 	public override void test2() {
-		writeln("bcdtest2 run");
+		//writeln("bcdtest2 run");
 		assert(__traits(compiles, typeid(null)));
 		auto s = typeid(null);
 		//assert(s is null);
@@ -79,6 +81,21 @@ class BcdTest : AbcTest {
 		foreach(k, v; d) {
 			assertEquals(d[k], v);
 		}
+	}
+	public void testCpu() {
+		import core.cpuid;
+		assertEquals("AuthenticAMD", core.cpuid.vendor());
+		assertEquals("AMD E-350 Processor", core.cpuid.processor());
+		assertEquals(2, core.cpuid.threadsPerCPU());
+		assertEquals(false, core.cpuid.hyperThreading());
+		assertEquals(2, core.cpuid.coresPerCPU());
+		assertEquals(true, core.cpuid.preferAthlon());
+		assertEquals(false, core.cpuid.preferPentium4());
+		assertEquals(false, core.cpuid.preferPentium1());
+		assertEquals(false, core.cpuid.x87onChip());
+	}
+	public void testTypeofThis() {
+		assertEquals("BcdTest", typeof(this).stringof);
 	}
 }
 

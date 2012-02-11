@@ -77,6 +77,17 @@ public static void assertEquals(int s, int t,
     }
 }
 
+public static void assertEquals(bool s, bool t, 
+        string file = __FILE__, 
+        size_t line = __LINE__)
+{
+    if (s != t) {
+        throw new core.exception.AssertError(
+                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
+                file, line);
+    }
+}
+
 mixin template DUnitMain() {
     int main (string[] args) {
         runTests();
@@ -390,26 +401,26 @@ mixin template TestMixin() {
     public static this() {
         //Names of test methods:
         immutable(string[]) _testMethods = _testMethodsList!(
-                __traits(parent, _testClass_), 
-                __traits(allMembers, __traits(parent, _testClass_))
+                typeof(this), 
+                __traits(allMembers, typeof(this))
         ).ret;
 
         //Factory method:
         static Object createFunction() { 
-            mixin("return (new " ~ __traits(parent, _testClass_).stringof ~ "());");
+            mixin("return (new " ~ typeof(this).stringof ~ "());");
         }
 
         //Run method:
         //Generate a switch statement, that calls the method that matches the testName:
         static void runTest(Object o, string testName) {
             mixin(
-                generateRunTest!(__traits(parent, _testClass_),
-                                 __traits(allMembers, __traits(parent, _testClass_)))
+                generateRunTest!(typeof(this),
+                                 __traits(allMembers, typeof(this)))
             );
         }
 
         //Register UnitTest class:
-        string className = __traits(parent, _testClass_).stringof;
+        string className = typeof(this).stringof;
         testClasses ~= className;
         testNamesByClass[className] = _testMethods.dup;
         testCallers[className] = &runTest;
@@ -491,8 +502,5 @@ mixin template TestMixin() {
                 }
             }
         }
-    }
-
-    private static void _testClass_() {
     }
 }
