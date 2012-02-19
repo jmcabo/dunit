@@ -10,6 +10,7 @@
  * Authors:   Juan Manuel Cabo
  * Version:   0.1
  * Source:    dunit.d
+ * Last update: 2012-02-19
  */
 /*          Copyright Juan Manuel Cabo 2012.
  * Distributed under the Boost Software License, Version 1.0.
@@ -22,29 +23,6 @@ module dunit;
 import std.stdio;
 import std.conv;
 
-/*
-To_Do:
-
-    @factory method
-    @switch(testmethodName) { case "test1": refObj.test1(); }
-    @register: struct {className, factoryMethodPointer, runMethodPointer}
-    @fixtureSetup
-    @fixtureTeardown
-    @setup
-    @tearDown
-    @unittest that derive unittests.
-    @var names that start with 'test'.
-    @'test' methods with arguments.
-    @'test' methods with overloads: only the first one is called
-    @'test' methods that are private or protected: can be private/protected, it is run anyways.
-    .Encapsulate globals (testClasses, testNamesByClass, etc.)
-    .Q: call tearDownClass anyways if a test fails?
-    .Q: call tearDown anyways if a test fails?
-    .print exception trace the same as classic unit test?
-    .list the kinds of asserts in classic unit test frameworks.
-    .version unittests
-    .ui
-*/
 
 
 string[] testClasses;
@@ -52,40 +30,35 @@ string[][string] testNamesByClass;
 void function(Object o, string testName)[string] testCallers;
 Object function()[string] testCreators;
 
-public static void assertEquals(string s, string t, 
+
+/** Asserts that both values are equal. */
+public static void assertEquals(T)(T s, T t, 
         string file = __FILE__, 
         size_t line = __LINE__)
+    if (!__traits(isScalar, T))
 {
-    if (s is t) {
-        return;
-    }
-    if (s != t) {
-        throw new core.exception.AssertError(
-                "Expected: '"~s~"', but was: '"~t~"'",
-                file, line);
-    }
+	if (s is t) {
+		return;
+	}
+	if (s != t) {
+		throw new core.exception.AssertError(
+				"Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
+				file, line);
+	}
 }
 
-public static void assertEquals(int s, int t, 
+/** Asserts that both values are equal. This function checks values of different scalar types,
+  * that, though being different types, they can be compared */
+public static void assertEquals(S, T)(S s, T t, 
         string file = __FILE__, 
         size_t line = __LINE__)
+	if (__traits(isScalar, T) && __traits(isScalar, S))
 {
-    if (s != t) {
-        throw new core.exception.AssertError(
-                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-                file, line);
-    }
-}
-
-public static void assertEquals(bool s, bool t, 
-        string file = __FILE__, 
-        size_t line = __LINE__)
-{
-    if (s != t) {
-        throw new core.exception.AssertError(
-                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-                file, line);
-    }
+	if (s != t) {
+		throw new core.exception.AssertError(
+				"Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
+				file, line);
+	}
 }
 
 mixin template DUnitMain() {
@@ -288,13 +261,7 @@ private static void startDots() {
     showingRed = false;
 }
 private static void printDot() {
-    //debug:
-    //if (showingRed) {
-        //startColorRed();
-    //} else {
-        //startColorGreen();
-    //}
-    startColorGreen(); //debug!
+    startColorGreen();
     write("."); stdout.flush();
     endColors();
 }
