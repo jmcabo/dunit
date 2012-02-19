@@ -24,7 +24,7 @@ import dunit;
 
 
 //Minimal example:
-class ATestClass() {
+class ATestClass {
     mixin TestMixin;
 
     void testExample() {
@@ -37,7 +37,8 @@ class ATestClass() {
  * Look!! no test base class needed!!
  */
 class AbcTest {
-    //This declaration here is the only thing needed to mark a class as a unit test class.
+    //This declaration here is the only thing needed to mark a class 
+    //as a unit test class:
     mixin TestMixin;
 
     //Variable members that start with 'test' are allowed.
@@ -91,8 +92,8 @@ class DerivedTest : AbcTest {
     mixin TestMixin;
 
     //Base class tests will be run!!!!!!
-    //You can for instance override setUpClass() and change the target implementation
-    //of a family of classes that you are testing.
+    //You can for instance override setUpClass() and change the target 
+    //implementation of a family of classes that you are testing.
 }
 
 
@@ -106,13 +107,15 @@ version(DUnit) {
     //
     //-You can alternatively call 
     //
-    //      dunit.runTests_Progress();      for java style results output (SHOWS COLORS IF IN UNIX !!!)
-    // or   dunit.runTests_Tree();          for a more verbose output
+    //      dunit.runTests_Progress();      for java style results 
+    //                                      output (SHOWS COLORS IF IN UNIX !!!)
+    // or   
+    //      dunit.runTests_Tree();          for a more verbose output
     //
     //from your main function.
 
-    //mixin DUnitMain;
-    void main() {dunit.runTests_Tree();}
+    mixin DUnitMain;
+    //void main() {dunit.runTests_Tree();}
 
 } else {
     int main (string[] args) {
@@ -133,27 +136,33 @@ Run this file with (works in Windows/Linux):
 The output will be (java style):
 
 
-    ..F....F..
+    ...F....F..
     There were 2 failures:
-    1) test2(AbcTest)core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
-    2) test2(DerivedTest)core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+    1) test2(AbcTest)core.exception.AssertError@exampleTests.d(60): 
+       Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+    2) test2(DerivedTest)core.exception.AssertError@exampleTests.d(60): 
+       Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
 
     FAILURES!!!
-    Tests run: 8,  Failures: 2,  Errors: 0
+    Tests run: 9,  Failures: 2,  Errors: 0
 
 
 If you use the more verbose method dunit.runTests_Tree(), then the output is:
 
 
     Unit tests: 
+        ATestClass
+            OK: testExample()
         AbcTest
             OK: test1()
-            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): 
+                    Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
             OK: testDefaultArguments()
             OK: test5()
         DerivedTest
             OK: test1()
-            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): 
+                    Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
             OK: testDefaultArguments()
             OK: test5()
 

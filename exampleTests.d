@@ -25,7 +25,7 @@ import dunit;
 
 
 //Minimal example:
-class ATestClass() {
+class ATestClass {
     mixin TestMixin;
 
     void testExample() {
@@ -113,6 +113,7 @@ version(DUnit) {
     //from your main function.
 
     mixin DUnitMain;
+    //void main() {dunit.runTests_Tree();}
 
 } else {
     int main (string[] args) {
@@ -139,13 +140,15 @@ The output will be (java style):
     2) test2(DerivedTest)core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
 
     FAILURES!!!
-    Tests run: 8,  Failures: 2,  Errors: 0
+    Tests run: 9,  Failures: 2,  Errors: 0
 
 
 If you use the more verbose method dunit.runTests_Tree(), then the output is:
 
 
     Unit tests: 
+        ATestClass
+            OK: testExample()
         AbcTest
             OK: test1()
             FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
