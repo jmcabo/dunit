@@ -8,7 +8,7 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
- * Version:   0.1
+ * Version:   0.4
  * Source:    dunit.d
  * Last update: 2012-02-19
  */
@@ -238,14 +238,33 @@ public static void runTests_Progress() {
 }
 
 version (linux) {
+	private static bool _useColor = false;
+	private static bool _useColorWasComputed = false;
+	private static bool canUseColor() {
+		if (!_useColorWasComputed) {
+			//Disable colors if the results output is written 
+            //to a file or pipe instead of a tty:
+			import core.sys.posix.unistd;
+			_useColor = (isatty(stdout.fileno()) != 0);
+			_useColorWasComputed = true;
+		}
+		return _useColor;
+	}
+
     private static void startColorGreen() {
-        write("\x1B[1;37;42m"); stdout.flush();
+		if (canUseColor()) {
+			write("\x1B[1;37;42m"); stdout.flush();
+		}
     }
     private static void startColorRed() {
-        write("\x1B[1;37;41m"); stdout.flush();
+		if (canUseColor()) {
+			write("\x1B[1;37;41m"); stdout.flush();
+		}
     }
     private static void endColors() {
-        write("\x1B[0;;m"); stdout.flush();
+		if (canUseColor()) {
+			write("\x1B[0;;m"); stdout.flush();
+		}
     }
 } else {
     private static void startColorGreen() {

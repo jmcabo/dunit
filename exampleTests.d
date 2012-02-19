@@ -10,7 +10,7 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
- * Version:   0.3
+ * Version:   0.4
  * Source:    dunit.d
  * Last update: 2012-02-19
  */
