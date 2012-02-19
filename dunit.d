@@ -37,14 +37,14 @@ public static void assertEquals(T)(T s, T t,
         size_t line = __LINE__)
     if (!__traits(isScalar, T))
 {
-	if (s is t) {
-		return;
-	}
-	if (s != t) {
-		throw new core.exception.AssertError(
-				"Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-				file, line);
-	}
+    if (s is t) {
+        return;
+    }
+    if (s != t) {
+        throw new core.exception.AssertError(
+                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
+                file, line);
+    }
 }
 
 /** Asserts that both values are equal. This function checks values of different scalar types,
@@ -52,13 +52,13 @@ public static void assertEquals(T)(T s, T t,
 public static void assertEquals(S, T)(S s, T t, 
         string file = __FILE__, 
         size_t line = __LINE__)
-	if (__traits(isScalar, T) && __traits(isScalar, S))
+    if (__traits(isScalar, T) && __traits(isScalar, S))
 {
-	if (s != t) {
-		throw new core.exception.AssertError(
-				"Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-				file, line);
-	}
+    if (s != t) {
+        throw new core.exception.AssertError(
+                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
+                file, line);
+    }
 }
 
 mixin template DUnitMain() {
@@ -123,7 +123,7 @@ public static void runTests_Progress() {
         foreach (string testName; testNamesByClass[className]) {
             ++testsRun;
 
-			printDot();
+            printDot();
 
             //setUp
             bool setUpOk = false;
