@@ -10,7 +10,7 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
- * Version:   0.4
+ * Version:   0.5
  * Source:    dunit.d
  * Last update: 2012-02-19
  */
@@ -21,6 +21,7 @@
  */
 module ExampleTests;
 import std.stdio, std.string;
+import core.thread;
 import dunit;
 
 
@@ -38,7 +39,8 @@ class ATestClass {
  * Look!! no test base class needed!!
  */
 class AbcTest {
-    //This declaration here is the only thing needed to mark a class as a unit test class.
+    //This declaration here is the only thing needed to mark a class 
+    //as a unit test class:
     mixin TestMixin;
 
     //Variable members that start with 'test' are allowed.
@@ -74,7 +76,7 @@ class AbcTest {
         assert(false, "fails");
     }
 
-    //Optional inicialization and de-initialization. 
+    //Optional initialization and de-initialization. 
     //  setUp() and tearDown() are called around each individual test.
     //  setUpClass() and tearDownClass() are called once around the whole unit test.
     public void setUp() {
@@ -92,8 +94,53 @@ class DerivedTest : AbcTest {
     mixin TestMixin;
 
     //Base class tests will be run!!!!!!
-    //You can for instance override setUpClass() and change the target implementation
-    //of a family of classes that you are testing.
+    //
+    //You can for instance override setUpClass() and change the target 
+    //implementation of a family of classes that you are testing.
+    //
+    //For instance: Run a set of tests against all derived classes of 
+    //the Stream class.  You do this by keeping all the tests in a parent
+    //test class, and creating a derived TestFixture for each one,
+    //that all it has to do is instantiate the instance under test in the
+    //overriden setUpClass().
+}
+
+
+/**
+ * You can write asynchronous tests too!! Test those socket listeners of
+ * yours, or your active thread objects, etc.!! 
+ */
+class AsynchronousTestExample {
+    mixin TestMixin;
+    Thread theThread;
+    bool threadDidItsThing;
+
+    //Prepare the test:
+    void setUp() {
+        threadDidItsThing = false;
+        theThread = new Thread(&threadFunction);
+    }
+
+    //Cleanup:
+    void tearDown() {
+        theThread.join();
+        theThread = null;
+    }
+
+    void threadFunction() {
+        threadDidItsThing = true;
+    }
+
+    void testThreadActuallyRuns() {
+        assertEquals(false, threadDidItsThing);
+
+        //Start the thread
+        theThread.start();
+
+        //Assert that within a period of time (500ms by default), the variable 
+        //threadDidItsThing gets toggled:
+        assertWithTimeout({return threadDidItsThing;});
+    }
 }
 
 
@@ -107,8 +154,10 @@ version(DUnit) {
     //
     //-You can alternatively call 
     //
-    //      dunit.runTests_Progress();      for java style results output (SHOWS COLORS IF IN UNIX !!!)
-    // or   dunit.runTests_Tree();          for a more verbose output
+    //      dunit.runTests_Progress();      for java style results 
+    //                                      output (SHOWS COLORS IF IN UNIX !!!)
+    // or   
+    //      dunit.runTests_Tree();          for a more verbose output
     //
     //from your main function.
 
@@ -123,6 +172,16 @@ version(DUnit) {
 
 
 /*
+ * Alternatively, you can run your DUnit tests when passing -unittest 
+ * to the compiler. This only needs to be declared once for the whole 
+ * application, and will run all the DUnit tests in all modules before the
+ * application starts:
+ */
+unittest {
+	dunit.runTests();
+}
+
+/*
 
 Run this file with (works in Windows/Linux):
 
@@ -134,13 +193,13 @@ Run this file with (works in Windows/Linux):
 The output will be (java style):
 
 
-    ..F....F..
+    ...F....F...
     There were 2 failures:
-    1) test2(AbcTest)core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
-    2) test2(DerivedTest)core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+    1) test2(AbcTest)core.exception.AssertError@exampleTests.d(61): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+    2) test2(DerivedTest)core.exception.AssertError@exampleTests.d(61): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
 
     FAILURES!!!
-    Tests run: 9,  Failures: 2,  Errors: 0
+    Tests run: 10,  Failures: 2,  Errors: 0
 
 
 If you use the more verbose method dunit.runTests_Tree(), then the output is:
@@ -159,6 +218,9 @@ If you use the more verbose method dunit.runTests_Tree(), then the output is:
             FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
             OK: testDefaultArguments()
             OK: test5()
+        AsynchronousTestExample
+            OK: testThreadActuallyRuns()
+
 
 HAVE FUN!
 
