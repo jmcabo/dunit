@@ -10,9 +10,9 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
- * Version:   0.5
+ * Version:   0.6
  * Source:    dunit.d
- * Last update: 2012-02-19
+ * Last update: 2012-03-21
  */
 /*          Copyright Juan Manuel Cabo 2012.
  * Distributed under the Boost Software License, Version 1.0.
@@ -207,19 +207,19 @@ If you use the more verbose method dunit.runTests_Tree(), then the output is:
 
     Unit tests: 
         ATestClass
-            OK: testExample()
+            OK:   0.01 ms  testExample()
         AbcTest
-            OK: test1()
-            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
-            OK: testDefaultArguments()
-            OK: test5()
+            OK:   0.00 ms  test1()
+            FAILED: test2(): core.exception.AssertError@exampleTests.d(62): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+            OK:   0.00 ms  testDefaultArguments()
+            OK:   0.00 ms  test5()
         DerivedTest
-            OK: test1()
-            FAILED: test2(): core.exception.AssertError@exampleTests.d(60): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
-            OK: testDefaultArguments()
-            OK: test5()
+            OK:   0.01 ms  test1()
+            FAILED: test2(): core.exception.AssertError@exampleTests.d(62): Expected: 'my string looks dazzling', but was: 'my dtring looks sazzling'
+            OK:   0.00 ms  testDefaultArguments()
+            OK:   0.00 ms  test5()
         AsynchronousTestExample
-            OK: testThreadActuallyRuns()
+            OK:  11.00 ms  testThreadActuallyRuns()
 
 
 HAVE FUN!

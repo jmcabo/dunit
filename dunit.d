@@ -8,9 +8,9 @@
  *
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Juan Manuel Cabo
- * Version:   0.5
+ * Version:   0.6
  * Source:    dunit.d
- * Last update: 2012-02-19
+ * Last update: 2012-03-21
  */
 /*          Copyright Juan Manuel Cabo 2012.
  * Distributed under the Boost Software License, Version 1.0.
@@ -23,6 +23,7 @@ module dunit;
 import std.stdio;
 import std.conv;
 import core.thread;
+import core.time;
 
 
 
@@ -272,7 +273,7 @@ public static void runTests_Progress() {
     writefln("Tests run: %d,  Failures: %d,  Errors: %d", testsRun, failedCount, errorCount);
 }
 
-version (linux) {
+version (Posix) {
     private static bool _useColor = false;
     private static bool _useColorWasComputed = false;
     private static bool canUseColor() {
@@ -388,8 +389,10 @@ public static void runTests_Tree() {
 
             //test
             try {
+                TickDuration startTime = TickDuration.currSystemTick();
                 testCallers[className](testObject, testName);
-                writefln("        OK: " ~ testName ~ "()");
+                double elapsedMs = (TickDuration.currSystemTick() - startTime).usecs() / 1000.0;
+                writefln("        OK: %6.2f ms  %s()", elapsedMs, testName);
             } catch (Throwable t) {
                 writefln("        FAILED: " ~ testName 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
