@@ -444,7 +444,7 @@ mixin template TestMixin() {
         }
 
         //Register UnitTest class:
-        string className = typeof(this).stringof;
+        string className = this.classinfo.name;
         testClasses ~= className;
         testNamesByClass[className] = _testMethods.dup;
         testCallers[className] = &runTest;
