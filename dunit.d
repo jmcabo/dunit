@@ -99,23 +99,23 @@ public static void assertWithTimeout(bool delegate() condition,
 
 mixin template DUnitMain() {
     int main (string[] args) {
-        runTests();
-        return 0;
+        int result = runTests();
+        return result;
     }
 }
 
 /**
  * Runs all the unit tests.
  */
-public static void runTests() {
-    runTests_Progress();
-    //debug: runTests_Tree();
+public static int runTests() {
+    return runTests_Progress();
+    //debug: return runTests_Tree();
 }
 
 /**
  * Runs all the unit tests, showing progress dots, and the results at the end.
  */
-public static void runTests_Progress() {
+public static int runTests_Progress() {
     struct TestError {
         string testClass;
         string testName;
@@ -225,7 +225,7 @@ public static void runTests_Progress() {
         writeln();
         printOk();
         writefln(" (%d Test%s)", testsRun, ((testsRun == 1) ? "" : "s"));
-        return;
+        return 0;
     }
     /* Errors
      */
@@ -271,6 +271,7 @@ public static void runTests_Progress() {
     writeln();
     printFailures();
     writefln("Tests run: %d,  Failures: %d,  Errors: %d", testsRun, failedCount, errorCount);
+    return (errorCount > 0) ? 2 : (failedCount > 0) ? 1 : 0;
 }
 
 version (Posix) {
@@ -346,7 +347,12 @@ private static void printFailures() {
 /**
  * Runs all the unit tests, showing the test tree as the tests run.
  */
-public static void runTests_Tree() {
+public static int runTests_Tree() {
+    // FIXME runTests_Progress reports an error for any Throwable that is not an AssertError
+    // FIXME runTests_Tree reports an error for any Throwable thrown by the test fixture
+    int failedCount = 0;
+    int errorCount = 0;
+
     //List Test classes:
     writeln("Unit tests: ");
     foreach (string className; testClasses) {
@@ -359,6 +365,7 @@ public static void runTests_Tree() {
         } catch (Throwable t) {
             writefln("        ERROR IN CONSTRUCTOR: " ~ className ~ ".this(): " 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+            ++errorCount;
         }
         if (testObject is null) {
             continue;
@@ -370,6 +377,7 @@ public static void runTests_Tree() {
         } catch (Throwable t) {
             writefln("        ERROR IN setUpClass: " ~ className ~ ".setUpClass(): " 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+            ++errorCount;
         }
 
         //Run each test of the class:
@@ -382,6 +390,7 @@ public static void runTests_Tree() {
             } catch (Throwable t) {
                 writefln("        ERROR: setUp"
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+                ++errorCount;
             }
             if (!setUpOk) {
                 continue;
@@ -396,6 +405,7 @@ public static void runTests_Tree() {
             } catch (Throwable t) {
                 writefln("        FAILED: " ~ testName 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+                ++failedCount;
             }
 
             //tearDown (call anyways if test failed)
@@ -404,6 +414,7 @@ public static void runTests_Tree() {
             } catch (Throwable t) {
                 writefln("        ERROR: tearDown" 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+                ++errorCount;
             }
         }
 
@@ -413,8 +424,10 @@ public static void runTests_Tree() {
         } catch (Throwable t) {
             writefln("        ERROR IN tearDownClass: " ~ className ~ ".tearDownClass(): " 
                     ~ "(): %s@%s(%d): %s", typeid(t).name, t.file, t.line, t.msg);
+            ++errorCount;
         }
     }
+    return (errorCount > 0) ? 2 : (failedCount > 0) ? 1 : 0;
 }
 
 

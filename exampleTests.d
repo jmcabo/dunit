@@ -162,10 +162,10 @@ version(DUnit) {
     //from your main function.
 
     mixin DUnitMain;
-    //void main() {dunit.runTests_Tree();}
+    //int main() {return dunit.runTests_Tree();}
 
 } else {
-    int main (string[] args) {
+    void main (string[] args) {
         writeln("production");
     }
 }
