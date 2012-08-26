@@ -1,4 +1,4 @@
-#!/usr/bin/rdmd
+#!/usr/bin/env rdmd
 
 /** Unit testing framework ('dunit')
  *
@@ -20,9 +20,11 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 module ExampleTests;
-import std.stdio, std.string;
+
+import dunit.framework;
 import core.thread;
-import dunit;
+import std.stdio;
+import std.string;
 
 
 //Minimal example:
@@ -178,7 +180,7 @@ version(DUnit) {
  * application starts:
  */
 unittest {
-	dunit.runTests();
+    runTests();
 }
 
 /*

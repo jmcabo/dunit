@@ -18,13 +18,12 @@
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
 
-module dunit;
+module dunit.framework;
 
+public import dunit.assertion;
 import std.stdio;
 import std.conv;
-import core.thread;
 import core.time;
-
 
 
 string[] testClasses;
@@ -32,70 +31,6 @@ string[][string] testNamesByClass;
 void function(Object o, string testName)[string] testCallers;
 Object function()[string] testCreators;
 
-
-/** Asserts that both values are equal. */
-public static void assertEquals(T)(T s, T t, 
-        string file = __FILE__, 
-        size_t line = __LINE__)
-    if (!__traits(isScalar, T))
-{
-    if (s is t) {
-        return;
-    }
-    if (s != t) {
-        throw new core.exception.AssertError(
-                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-                file, line);
-    }
-}
-
-/** Asserts that both values are equal. This function checks values of 
-  * different scalar types, that, though being different types, they 
-  * can be compared */
-public static void assertEquals(S, T)(S s, T t, 
-        string file = __FILE__, 
-        size_t line = __LINE__)
-    if (__traits(isScalar, T) && __traits(isScalar, S))
-{
-    if (s != t) {
-        throw new core.exception.AssertError(
-                "Expected: '"~to!string(s)~"', but was: '"~to!string(t)~"'",
-                file, line);
-    }
-}
-
-/** Checks a delegate until the timeout expires. The assert error is produced
-  * if the delegate fails to return 'true' before the timeout. 
-  *
-  * The parameter timeoutMsecs determines the maximum timeout to wait before
-  * asserting a failure (default is 500ms).
-  *
-  * The parameter recheckTimeMsecs determines how often the predicate will
-  * be checked (default is 10ms).
-  *
-  * This kind of assertion is very useful to check on code that runs in another
-  * thread. For instance, the thread that listens to a socket.
-  */
-public static void assertWithTimeout(bool delegate() condition, 
-        int timeoutMsecs = 500, int recheckTimeMsecs = 10, 
-        string msg = null,
-        string file = __FILE__, 
-        size_t line = __LINE__)
-{
-    int count = 0;
-    
-    while (!condition()) {
-        if (recheckTimeMsecs * count > timeoutMsecs) {
-            if (msg is null) {
-                msg = "Timeout elapsed for condition.";
-            }
-            throw new core.exception.AssertError(msg, file, line);
-        }
-        
-        Thread.sleep(dur!"msecs"(recheckTimeMsecs));
-        ++count;
-    }
-}
 
 mixin template DUnitMain() {
     int main (string[] args) {
