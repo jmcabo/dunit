@@ -141,7 +141,7 @@ class AsynchronousTestExample {
 
         //Assert that within a period of time (500ms by default), the variable 
         //threadDidItsThing gets toggled:
-        assertWithTimeout({return threadDidItsThing;});
+        assertEventually({ return threadDidItsThing; });
     }
 }
 
@@ -180,7 +180,8 @@ version(DUnit) {
  * application starts:
  */
 unittest {
-    runTests();
+    //runTests();
+    runTests_Tree();
 }
 
 /*

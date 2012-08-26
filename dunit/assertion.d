@@ -225,35 +225,47 @@ unittest
             collectExceptionMsg!AssertError(fail()));
 }
 
-/** Checks a delegate until the timeout expires. The assert error is produced
- * if the delegate fails to return 'true' before the timeout. 
+/**
+ * Checks a probe until the timeout expires. The assert error is produced
+ * if the probe fails to return 'true' before the timeout. 
  *
- * The parameter timeoutMsecs determines the maximum timeout to wait before
+ * The parameter timeout determines the maximum timeout to wait before
  * asserting a failure (default is 500ms).
  *
- * The parameter recheckTimeMsecs determines how often the predicate will
- * be checked (default is 10ms).
+ * The parameter delay determines how often the predicate will be
+ * checked (default is 10ms).
  *
  * This kind of assertion is very useful to check on code that runs in another
  * thread. For instance, the thread that listens to a socket.
+ *
+ * Throws: AssertError when the probe fails to become true before timeout
  */
-public static void assertWithTimeout(bool delegate() condition, 
-       int timeoutMsecs = 500, int recheckTimeMsecs = 10, 
-       string msg = null,
-       string file = __FILE__, 
-       size_t line = __LINE__)
+public static void assertEventually(bool delegate() probe, 
+        Duration timeout = dur!"msecs"(500), Duration delay = dur!"msecs"(10), 
+        string msg = null,
+        string file = __FILE__, 
+        size_t line = __LINE__)
 {
-   int count = 0;
+    TickDuration startTime = TickDuration.currSystemTick();
    
-   while (!condition()) {
-       if (recheckTimeMsecs * count > timeoutMsecs) {
-           if (msg is null) {
-               msg = "Timeout elapsed for condition.";
-           }
-           throw new core.exception.AssertError(msg, file, line);
-       }
-       
-       Thread.sleep(dur!"msecs"(recheckTimeMsecs));
-       ++count;
-   }
+    while (!probe()) {
+        Duration elapsedTime = cast(Duration)(TickDuration.currSystemTick() - startTime);
+
+        if (elapsedTime >= timeout) {
+            if (msg.empty) {
+                msg = "timed out";
+            }
+            fail(msg, file, line);
+        }
+
+        Thread.sleep(delay);
+    }
+}
+
+unittest
+{
+    assertEventually({ static count = 0; return ++count > 42; });
+
+    assertEquals("timed out",
+            collectExceptionMsg!AssertError(assertEventually({ return false; })));
 }
