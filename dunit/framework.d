@@ -68,8 +68,6 @@ public static int runTests_Progress() {
     TestError[] errors;
     int testsRun = 0;
 
-    startDots();
-
     foreach (string className; testClasses) {
         //Create the class:
         Object testObject = null;
@@ -138,8 +136,6 @@ public static int runTests_Progress() {
             errors ~= TestError(className, "tearDownClass", t);
         }
     }
-
-    endDots();
     
     /* Count how many problems where asserts, and how many other exceptions. 
      */
@@ -247,25 +243,15 @@ version (Posix) {
     }
 }
 
-private static bool showingRed = false;
-private static void startDots() {
-    showingRed = false;
-}
 private static void printDot() {
     startColorGreen();
     write("."); stdout.flush();
     endColors();
 }
 private static void printF() {
-    if (!showingRed) {
-        showingRed = true;
-    }
     startColorRed();
     write("F"); stdout.flush();
     endColors();
-}
-private static void endDots() {
-    showingRed = false;
 }
 private static void printOk() {
     startColorGreen();
