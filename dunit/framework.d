@@ -21,8 +21,10 @@
 module dunit.framework;
 
 public import dunit.assertion;
-import std.stdio;
 import std.conv;
+import std.getopt;
+import std.regex;
+import std.stdio;
 import core.time;
 
 
@@ -34,23 +36,60 @@ Object function()[string] testCreators;
 
 mixin template DUnitMain() {
     int main (string[] args) {
-        int result = runTests();
-        return result;
+        return dunit_main(args);
     }
+}
+
+public int dunit_main(string[] args)
+{
+    string[] filters = null;
+    bool verbose = false;
+
+    getopt(args, "filter|f", &filters, "verbose|v", &verbose);
+
+    string[][string] pickedTestNamesByClass = null;
+
+    if (filters is null)
+    {
+        filters = [null];
+    }
+    foreach (className; testNamesByClass.keys)
+    {
+        foreach (testName; testNamesByClass[className])
+        {
+            string fullyQualifiedName = className ~ '.' ~ testName;
+
+            foreach (filter; filters)
+            {
+                if (match(fullyQualifiedName, filter))
+                {
+                    pickedTestNamesByClass[className] ~= testName;
+                    break;
+                }
+            }
+        }
+    }
+    if (verbose)
+    {
+        return runTests_Tree(pickedTestNamesByClass);
+    }
+    else
+    {
+        return runTests_Progress(pickedTestNamesByClass);
+    }    
 }
 
 /**
  * Runs all the unit tests.
  */
 public static int runTests() {
-    return runTests_Progress();
-    //debug: return runTests_Tree();
+    return runTests_Progress(testNamesByClass);
 }
 
 /**
  * Runs all the unit tests, showing progress dots, and the results at the end.
  */
-public static int runTests_Progress() {
+public static int runTests_Progress(string[][string] testNamesByClass) {
     struct TestError {
         string testClass;
         string testName;
@@ -68,7 +107,7 @@ public static int runTests_Progress() {
     TestError[] errors;
     int testsRun = 0;
 
-    foreach (string className; testClasses) {
+    foreach (string className; testNamesByClass.keys) {
         //Create the class:
         Object testObject = null;
         try {
@@ -268,7 +307,7 @@ private static void printFailures() {
 /**
  * Runs all the unit tests, showing the test tree as the tests run.
  */
-public static int runTests_Tree() {
+public static int runTests_Tree(string[][string] testNamesByClass) {
     // FIXME runTests_Progress reports an error for any Throwable that is not an AssertError
     // FIXME runTests_Tree reports an error for any Throwable thrown by the test fixture
     int failedCount = 0;
@@ -276,7 +315,7 @@ public static int runTests_Tree() {
 
     //List Test classes:
     writeln("Unit tests: ");
-    foreach (string className; testClasses) {
+    foreach (string className; testNamesByClass.keys) {
         writeln("    " ~ className);
 
         //Create the class:
