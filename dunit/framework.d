@@ -17,6 +17,7 @@
 module dunit.framework;
 
 public import dunit.assertion;
+import std.algorithm;
 import std.conv;
 import std.getopt;
 import std.regex;
@@ -426,7 +427,7 @@ mixin template TestMixin() {
         } else {
 
             //Skip strings that don't start with "test":
-            static if (args[0].length < 4 || args[0][0..4] != "test"
+            static if (!startsWith(args[0], "test")
                   || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
             {
                 static if(args.length == 1) {
@@ -470,11 +471,9 @@ mixin template TestMixin() {
             immutable(string) ret = "";
         } else {
             //Skip method names that don't start with 'test':
-            static if (((args[0].length < 4 || args[0][0..4] != "test") 
-                && (args[0].length < 5 || args[0][0..5] != "setUp")
-                && (args[0].length < 8 || args[0][0..8] != "tearDown")
-                && (args[0].length < 10 || args[0][0..10] != "setUpClass")
-                && (args[0].length < 13 || args[0][0..13] != "tearDownClass"))
+            static if (!(startsWith(args[0], "test")
+                || args[0] == "setUp" || args[0] == "tearDown"
+                || args[0] == "setUpClass" || args[0] == "tearDownClass")
                 || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
             {
                 static if (args.length == 1) {
