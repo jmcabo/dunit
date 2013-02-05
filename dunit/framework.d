@@ -1,22 +1,18 @@
-/** Unit testing framework ('dunit')
+/**
+ * Unit testing framework ('dunit')
  *
  * Allows to define unittests simply as methods which names start
  * with 'test'.
  * The only thing necessary to create a unit test class, is to
  * declare the mixin TestMixin inside the class. This will register
  * the class and its test methods for the test runner.
- *
- * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
- * Authors:   Juan Manuel Cabo
- * Version:   0.6
- * Source:    dunit.d
- * Last update: 2012-03-21
  */
-/*          Copyright Juan Manuel Cabo 2012.
- * Distributed under the Boost Software License, Version 1.0.
- *    (See accompanying file LICENSE_1_0.txt or copy at
- *          http://www.boost.org/LICENSE_1_0.txt)
- */
+
+//          Copyright Juan Manuel Cabo 2012.
+//          Copyright Mario Kröplin 2013.
+// Distributed under the Boost Software License, Version 1.0.
+//    (See accompanying file LICENSE_1_0.txt or copy at
+//          http://www.boost.org/LICENSE_1_0.txt)
 
 module dunit.framework;
 
