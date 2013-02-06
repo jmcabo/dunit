@@ -427,7 +427,7 @@ mixin template TestMixin() {
         } else {
 
             //Skip strings that don't start with "test":
-            static if (!startsWith(args[0], "test")
+            static if (!args[0].startsWith("test")
                   || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
             {
                 static if(args.length == 1) {
@@ -470,8 +470,7 @@ mixin template TestMixin() {
         static if (args.length == 0) {
             immutable(string) ret = "";
         } else {
-            //Skip method names that don't start with 'test':
-            static if (!(startsWith(args[0], "test")
+            static if (!(args[0].startsWith("test")
                 || args[0] == "setUp" || args[0] == "tearDown"
                 || args[0] == "setUpClass" || args[0] == "tearDownClass")
                 || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
@@ -482,7 +481,6 @@ mixin template TestMixin() {
                     immutable(string) ret = generateRunTestImpl!(T, args[1..$]).ret;
                 }
             } else {
-
                 //Create the case statement that calls that test:
                 static if (args.length == 1) {
                     immutable(string) ret = 
