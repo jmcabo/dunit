@@ -18,8 +18,21 @@ import std.conv;
 version (unittest) import std.exception;
 
 /**
+ * Thrown on an assertion failure.
+ */
+class AssertException : Exception
+{
+    this(string msg = null,
+            string file = __FILE__,
+            size_t line = __LINE__)
+    {
+        super(msg.empty ? "Assertion failure" : msg, file, line);
+    }
+}
+
+/**
  * Asserts that a condition is true.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertTrue(bool condition,  string msg = null,
         string file = __FILE__,
@@ -33,7 +46,7 @@ void assertTrue(bool condition,  string msg = null,
 
 /**
  * Asserts that a condition is false.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertFalse(bool condition,  string msg = null,
         string file = __FILE__,
@@ -49,16 +62,16 @@ unittest
 {
     assertTrue(true);
     assertEquals("Assertion failure",
-            collectExceptionMsg!AssertError(assertTrue(false)));
+            collectExceptionMsg!AssertException(assertTrue(false)));
 
     assertFalse(false);
     assertEquals("Assertion failure",
-            collectExceptionMsg!AssertError(assertFalse(true)));
+            collectExceptionMsg!AssertException(assertFalse(true)));
 }
 
 /**
  * Asserts that the values are equal.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertEquals(T, U)(T expected, U actual,  string msg = null,
         string file = __FILE__,
@@ -77,11 +90,11 @@ unittest
 {
     assertEquals("foo", "foo");
     assertEquals("expected: <foo> but was: <bar>",
-            collectExceptionMsg!AssertError(assertEquals("foo", "bar")));
+            collectExceptionMsg!AssertException(assertEquals("foo", "bar")));
 
     assertEquals(42, 42);
     assertEquals("expected: <42> but was: <23>",
-            collectExceptionMsg!AssertError(assertEquals(42, 23)));
+            collectExceptionMsg!AssertException(assertEquals(42, 23)));
 
     assertEquals(42.0, 42.0);
 
@@ -91,12 +104,12 @@ unittest
     assertEquals(foo, foo);
     assertEquals(bar, bar);
     assertEquals("expected: <object.Object> but was: <null>",
-            collectExceptionMsg!AssertError(assertEquals(foo, bar)));
+            collectExceptionMsg!AssertException(assertEquals(foo, bar)));
 }
 
 /**
  * Asserts that the arrays are equal.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, string msg = null,
         string file = __FILE__,
@@ -122,16 +135,16 @@ unittest
 
     assertArrayEquals(expecteds, actuals);
     assertEquals("array mismatch at index 1; expected: <2> but was: <2.3>",
-            collectExceptionMsg!AssertError(assertArrayEquals(expecteds, [1, 2.3])));
+            collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2.3])));
     assertEquals("array length mismatch; expected: <3> but was: <2>",
-            collectExceptionMsg!AssertError(assertArrayEquals(expecteds, [1, 2])));
+            collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2])));
     assertEquals("array mismatch at index 2; expected: <r> but was: <z>",
-            collectExceptionMsg!AssertError(assertArrayEquals("bar", "baz")));
+            collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
 }
 
 /**
  * Asserts that the value is null.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertNull(T)(T actual,  string msg = null,
         string file = __FILE__,
@@ -145,7 +158,7 @@ void assertNull(T)(T actual,  string msg = null,
 
 /**
  * Asserts that the value is not null.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertNotNull(T)(T actual,  string msg = null,
         string file = __FILE__,
@@ -163,16 +176,16 @@ unittest
     
     assertNull(null);
     assertEquals("Assertion failure",
-            collectExceptionMsg!AssertError(assertNull(foo)));
+            collectExceptionMsg!AssertException(assertNull(foo)));
 
     assertNotNull(foo);
     assertEquals("Assertion failure",
-            collectExceptionMsg!AssertError(assertNotNull(null)));
+            collectExceptionMsg!AssertException(assertNotNull(null)));
 }
 
 /**
  * Asserts that the values are the same.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertSame(T, U)(T expected, U actual,  string msg = null,
         string file = __FILE__,
@@ -189,7 +202,7 @@ void assertSame(T, U)(T expected, U actual,  string msg = null,
 
 /**
  * Asserts that the values are not the same.
- * Throws: AssertError otherwise
+ * Throws: AssertException otherwise
  */
 void assertNotSame(T, U)(T expected, U actual,  string msg = null,
         string file = __FILE__,
@@ -211,28 +224,28 @@ unittest
 
     assertSame(foo, foo);
     assertEquals("expected same: <object.Object> was not: <object.Object>",
-            collectExceptionMsg!AssertError(assertSame(foo, bar)));
+            collectExceptionMsg!AssertException(assertSame(foo, bar)));
 
     assertNotSame(foo, bar);
     assertEquals("expected not same",
-            collectExceptionMsg!AssertError(assertNotSame(foo, foo)));
+            collectExceptionMsg!AssertException(assertNotSame(foo, foo)));
 }
 
 /**
  * Fails a test.
- * Throws: AssertError
+ * Throws: AssertException
  */
 void fail(string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
-    throw (msg.empty) ? new AssertError(file, line) : new AssertError(msg, file, line);
+    throw new AssertException(msg, file, line);
 }
 
 unittest
 {
     assertEquals("Assertion failure",
-            collectExceptionMsg!AssertError(fail()));
+            collectExceptionMsg!AssertException(fail()));
 }
 
 /**
@@ -248,7 +261,7 @@ unittest
  * This kind of assertion is very useful to check on code that runs in another
  * thread. For instance, the thread that listens to a socket.
  *
- * Throws: AssertError when the probe fails to become true before timeout
+ * Throws: AssertException when the probe fails to become true before timeout
  */
 public static void assertEventually(bool delegate() probe, 
         Duration timeout = dur!"msecs"(500), Duration delay = dur!"msecs"(10), 
@@ -277,5 +290,5 @@ unittest
     assertEventually({ static count = 0; return ++count > 42; });
 
     assertEquals("timed out",
-            collectExceptionMsg!AssertError(assertEventually({ return false; })));
+            collectExceptionMsg!AssertException(assertEventually({ return false; })));
 }
