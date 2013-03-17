@@ -1,10 +1,5 @@
 /**
- * Unit testing framework ('dunit')
- *
- * Allows to define unittests simply as methods which names start with "test".
- * The only thing necessary to create a unit test class, is to declare
- * the mixin TestMixin inside the class. This will register the class
- * and its test methods for the test runner.
+ * xUnit Testing Framework for the D Programming Language - framework
  */
 
 //          Copyright Juan Manuel Cabo 2012.
@@ -16,13 +11,14 @@
 module dunit.framework;
 
 public import dunit.assertion;
+
+import core.time;
 import std.algorithm;
 import std.array;
 import std.conv;
 import std.getopt;
 import std.regex;
 import std.stdio;
-import core.time;
 
 string[] testClasses;
 string[][string] testNamesByClass;
@@ -564,7 +560,7 @@ mixin template TestMixin()
         else
         {
             // Skip strings that don't start with "test":
-            static if (!args[0].startsWith("test")
+            static if (args[0].length < 4 || args[0][0 .. 4] != "test"
                 || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
             {
                 static if(args.length == 1)
@@ -622,7 +618,7 @@ mixin template TestMixin()
         }
         else
         {
-            static if (!(args[0].startsWith("test")
+            static if (!(args[0].length >= 4 && args[0][0 .. 4] == "test"
                 || args[0] == "setUp" || args[0] == "tearDown"
                 || args[0] == "setUpClass" || args[0] == "tearDownClass")
                 || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))

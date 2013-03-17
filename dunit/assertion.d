@@ -1,5 +1,5 @@
 /**
- * Unit testing framework ('dunit')
+ * xUnit Testing Framework for the D Programming Language - assertions
  */
 
 //          Copyright Juan Manuel Cabo 2012.
@@ -10,11 +10,12 @@
 
 module dunit.assertion;
 
-import core.exception;
 import core.thread;
+import core.time;
 import std.algorithm;
 import std.array;
 import std.conv;
+
 version (unittest) import std.exception;
 
 /**
