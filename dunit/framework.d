@@ -46,19 +46,16 @@ public int dunit_main(string[] args)
     if (filters is null)
         filters = [null];
 
-    foreach (className; testNamesByClass.byKey)
+    foreach (filter; filters)
     {
-        foreach (testName; testNamesByClass[className])
+        foreach (className; testNamesByClass.byKey)
         {
-            string fullyQualifiedName = className ~ '.' ~ testName;
-
-            foreach (filter; filters)
+            foreach (testName; testNamesByClass[className])
             {
+                string fullyQualifiedName = className ~ '.' ~ testName;
+
                 if (match(fullyQualifiedName, filter))
-                {
                     selectedTestNamesByClass[className] ~= testName;
-                    break;
-                }
             }
         }
     }

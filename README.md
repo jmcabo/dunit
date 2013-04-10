@@ -44,6 +44,7 @@ selective test execution
 
     ./example.d --list
     ./example.d --filter testEqualsFailure
+    ./example.d --filter testSuccess --filter testSuccess
 
 comparing representations
 
