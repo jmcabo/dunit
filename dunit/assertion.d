@@ -118,7 +118,7 @@ void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, string msg = null,
 {
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    for (size_t index = 0; index < min(expecteds.length, actuals.length); ++index)
+    foreach (index; 0 .. min(expecteds.length, actuals.length))
     {
         assertEquals(expecteds[index], actuals[index],
                 header ~ "array mismatch at index " ~ to!string(index),
