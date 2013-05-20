@@ -1,32 +1,42 @@
 xUnit Testing Framework for the D Programming Language
 ======================================================
 
-[D Programming Language](http://dlang.org)  
-D(2)
-
-[xUnit Test Patterns](http://xunitpatterns.com)
+This is a simple implementation of the xUnit Testing Framework
+for the [D Programming Language](http://dlang.org).
+It enables the use of the [xUnit Test Patterns](http://xunitpatterns.com).
 
 Testing Functions vs. Interactions
 ----------------------------------
 
-unittest functions: collection of one-liners documenting a function  
-Python: `doctest`
+The built-in support for unit tests in D is best suited for testing functions,
+when the individual test cases can be expressed as one-liners.
 
-xUnit tests: fixture setup, exercise SUT, result verification, fixture teardown  
-Python: `unittest` (PyUnit)
+For testing interactions of objects, however, more support is required,
+for example, for setting up a test fixture.
+This is the responsibility of a testing framework.
 
 Reporting Failures and Errors
 -----------------------------
 
-contracts
+With no additional effort, specialized assertion functions report failures
+more helpful than violated contracts.
 
-    assert(answer == 42);
-
-stops at first failed assert (?)
+For example,
 
     assertEquals(42, answer);
 
+will report something like
+
+    expected: <42> but was: <24>
+
 names of all failed test methods (as helpful as the naming of the test methods)
+
+User Defined Attributes
+-----------------------
+
+@Test, @Before, @After, @BeforeClass, @AfterClass, and @Ignore
+
+instead of naming convention testLikeThis
 
 Examples
 --------
@@ -54,4 +64,6 @@ forked from [jmcabo/dunit](https://github.com/jmcabo/dunit); fixed issues; restr
 
 not [D(1)Unit](http://www.dsource.org/projects/dmocks/wiki/DUnit) - allows to call (passed) test methods during setup
 
-TODO: Hamcrest Matchers and `assertThat`
+won't fix [Issue 4653 - More unit test functions should be added](http://d.puremagic.com/issues/show_bug.cgi?id=4653)
+
+TODO: [Hamcrest](http://code.google.com/p/hamcrest/) Matchers and `assertThat`

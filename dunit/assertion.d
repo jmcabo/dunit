@@ -1,7 +1,3 @@
-/**
- * xUnit Testing Framework for the D Programming Language - assertions
- */
-
 //          Copyright Juan Manuel Cabo 2012.
 //          Copyright Mario Kröplin 2013.
 // Distributed under the Boost Software License, Version 1.0.
@@ -35,7 +31,7 @@ class AssertException : Exception
  * Asserts that a condition is true.
  * Throws: AssertException otherwise
  */
-void assertTrue(bool condition,  string msg = null,
+void assertTrue(bool condition, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -49,7 +45,7 @@ void assertTrue(bool condition,  string msg = null,
  * Asserts that a condition is false.
  * Throws: AssertException otherwise
  */
-void assertFalse(bool condition,  string msg = null,
+void assertFalse(bool condition, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -74,7 +70,7 @@ unittest
  * Asserts that the values are equal.
  * Throws: AssertException otherwise
  */
-void assertEquals(T, U)(T expected, U actual,  string msg = null,
+void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -112,7 +108,7 @@ unittest
  * Asserts that the arrays are equal.
  * Throws: AssertException otherwise
  */
-void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, string msg = null,
+void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -147,7 +143,7 @@ unittest
  * Asserts that the value is null.
  * Throws: AssertException otherwise
  */
-void assertNull(T)(T actual,  string msg = null,
+void assertNull(T)(T actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -161,7 +157,7 @@ void assertNull(T)(T actual,  string msg = null,
  * Asserts that the value is not null.
  * Throws: AssertException otherwise
  */
-void assertNotNull(T)(T actual,  string msg = null,
+void assertNotNull(T)(T actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -174,7 +170,7 @@ void assertNotNull(T)(T actual,  string msg = null,
 unittest
 {
     Object foo = new Object();
-    
+
     assertNull(null);
     assertEquals("Assertion failure",
             collectExceptionMsg!AssertException(assertNull(foo)));
@@ -188,7 +184,7 @@ unittest
  * Asserts that the values are the same.
  * Throws: AssertException otherwise
  */
-void assertSame(T, U)(T expected, U actual,  string msg = null,
+void assertSame(T, U)(T expected, U actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -205,7 +201,7 @@ void assertSame(T, U)(T expected, U actual,  string msg = null,
  * Asserts that the values are not the same.
  * Throws: AssertException otherwise
  */
-void assertNotSame(T, U)(T expected, U actual,  string msg = null,
+void assertNotSame(T, U)(T expected, U actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -251,7 +247,7 @@ unittest
 
 /**
  * Checks a probe until the timeout expires. The assert error is produced
- * if the probe fails to return 'true' before the timeout. 
+ * if the probe fails to return 'true' before the timeout.
  *
  * The parameter timeout determines the maximum timeout to wait before
  * asserting a failure (default is 500ms).
@@ -264,23 +260,20 @@ unittest
  *
  * Throws: AssertException when the probe fails to become true before timeout
  */
-public static void assertEventually(bool delegate() probe, 
-        Duration timeout = dur!"msecs"(500), Duration delay = dur!"msecs"(10), 
-        string msg = null,
-        string file = __FILE__, 
+public static void assertEventually(bool delegate() probe,
+        Duration timeout = dur!"msecs"(500), Duration delay = dur!"msecs"(10),
+        lazy string msg = null,
+        string file = __FILE__,
         size_t line = __LINE__)
 {
     TickDuration startTime = TickDuration.currSystemTick();
-   
-    while (!probe()) {
+
+    while (!probe())
+    {
         Duration elapsedTime = cast(Duration)(TickDuration.currSystemTick() - startTime);
 
-        if (elapsedTime >= timeout) {
-            if (msg.empty) {
-                msg = "timed out";
-            }
-            fail(msg, file, line);
-        }
+        if (elapsedTime >= timeout)
+            fail(msg.empty ? "timed out" : msg, file, line);
 
         Thread.sleep(delay);
     }

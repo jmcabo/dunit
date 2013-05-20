@@ -1,7 +1,3 @@
-/**
- * xUnit Testing Framework for the D Programming Language - framework
- */
-
 //          Copyright Juan Manuel Cabo 2012.
 //          Copyright Mario Kröplin 2013.
 // Distributed under the Boost Software License, Version 1.0.
@@ -11,6 +7,7 @@
 module dunit.framework;
 
 public import dunit.assertion;
+public import dunit.attributes;
 
 import core.time;
 import std.algorithm;
@@ -19,13 +16,25 @@ import std.conv;
 import std.getopt;
 import std.regex;
 import std.stdio;
+public import std.typetuple;  // FIXME
 
-string[] testClasses;
-string[][string] testNamesByClass;
-void function(Object o, string testName)[string] testCallers;
-Object function()[string] testCreators;
+struct TestClass
+{
+    string[] tests;
+    string[] ignoredTests;
 
-mixin template DUnitMain()
+    Object function() create;
+    void function(Object o) beforeClass;
+    void function(Object o) before;
+    void function(Object o, string testName) test;
+    void function(Object o) after;
+    void function(Object o) afterClass;
+}
+
+string[] testClassOrder;
+TestClass[string] testClasses;
+
+mixin template Main()
 {
     int main (string[] args)
     {
@@ -36,10 +45,21 @@ mixin template DUnitMain()
 public int dunit_main(string[] args)
 {
     string[] filters = null;
+    bool help = false;
     bool list = false;
     bool verbose = false;
 
-    getopt(args, "filter|f", &filters, "list|l", &list, "verbose|v", &verbose);
+    getopt(args,
+            "filter|f", &filters,
+            "help|h", &help,
+            "list|l", &list,
+            "verbose|v", &verbose);
+
+    if (help)
+    {
+        // TODO display usage
+        return 0;
+    }
 
     string[][string] selectedTestNamesByClass = null;
 
@@ -48,9 +68,9 @@ public int dunit_main(string[] args)
 
     foreach (filter; filters)
     {
-        foreach (className; testNamesByClass.byKey)
+        foreach (className; testClassOrder)
         {
-            foreach (testName; testNamesByClass[className])
+            foreach (testName; testClasses[className].tests)
             {
                 string fullyQualifiedName = className ~ '.' ~ testName;
 
@@ -62,9 +82,9 @@ public int dunit_main(string[] args)
 
     if (list)
     {
-        foreach (className; selectedTestNamesByClass.byKey)
+        foreach (className; testClassOrder)
         {
-            foreach (testName; selectedTestNamesByClass[className])
+            foreach (testName; selectedTestNamesByClass.get(className, null))
             {
                 string fullyQualifiedName = className ~ '.' ~ testName;
 
@@ -78,14 +98,6 @@ public int dunit_main(string[] args)
         return runTests_Tree(selectedTestNamesByClass);
     else
         return runTests_Progress(selectedTestNamesByClass);
-}
-
-/**
- * Runs all the unit tests.
- */
-public static int runTests()
-{
-    return runTests_Progress(testNamesByClass);
 }
 
 /**
@@ -111,24 +123,29 @@ public static int runTests_Progress(string[][string] testNamesByClass)
     Entry[] errors = null;
     int count = 0;
 
-    foreach (string className; testNamesByClass.byKey)
+    foreach (className; testClassOrder)
     {
+        if (className !in testNamesByClass)
+            continue;
+
         // create test object
         Object testObject = null;
 
         try
         {
-            testObject = testCreators[className]();
+            testObject = testClasses[className].create();
         }
         catch (AssertException exception)
         {
             failures ~= Entry(className, "this", exception);
-            printF();
+            write(red("F"));
+            stdout.flush();
         }
         catch (Throwable throwable)
         {
             errors ~= Entry(className, "this", throwable);
-            printF();
+            write(red("E"));
+            stdout.flush();
         }
 
         if (testObject is null)
@@ -137,22 +154,29 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         // setUpClass
         try
         {
-            testCallers[className](testObject, "setUpClass");
+            testClasses[className].beforeClass(testObject);
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "setUpClass", exception);
+            failures ~= Entry(className, "beforeClass", exception);
             continue;
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "setUpClass", throwable);
+            errors ~= Entry(className, "beforeClass", throwable);
             continue;
         }
 
         // run each test function of the class
-        foreach (string testName; testNamesByClass[className])
+        foreach (testName; testNamesByClass[className])
         {
+            if (canFind(testClasses[className].ignoredTests, testName))
+            {
+                write(yellow("I"));
+                stdout.flush();
+                continue;
+            }
+
             ++count;
 
             // setUp
@@ -160,25 +184,27 @@ public static int runTests_Progress(string[][string] testNamesByClass)
 
             try
             {
-                testCallers[className](testObject, "setUp");
+                testClasses[className].before(testObject);
             }
             catch (AssertException exception)
             {
-                failures ~= Entry(className, "setUp", exception);
-                printF();
+                failures ~= Entry(className, "before", exception);
+                write(red("F"));
+                stdout.flush();
                 continue;
             }
             catch (Throwable throwable)
             {
-                errors ~= Entry(className, "setUp", throwable);
-                printF();
+                errors ~= Entry(className, "before", throwable);
+                write(red("E"));
+                stdout.flush();
                 continue;
             }
 
             // test
             try
             {
-                testCallers[className](testObject, testName);
+                testClasses[className].test(testObject, testName);
             }
             catch (AssertException exception)
             {
@@ -194,47 +220,47 @@ public static int runTests_Progress(string[][string] testNamesByClass)
             // tearDown (even if test failed)
             try
             {
-                testCallers[className](testObject, "tearDown");
+                testClasses[className].after(testObject);
             }
             catch (AssertException exception)
             {
-                failures ~= Entry(className, "tearDown", exception);
+                failures ~= Entry(className, "after", exception);
                 success = false;
             }
             catch (Throwable throwable)
             {
-                errors ~= Entry(className, "tearDown", throwable);
+                errors ~= Entry(className, "after", throwable);
                 success = false;
             }
 
             if (success)
-                printDot();
+                write(green("."));
             else
-                printF();
+                write(red("F"));  // FIXME or "E"?
+            stdout.flush();
         }
 
         // tearDownClass
         try
         {
-            testCallers[className](testObject, "tearDownClass");
+            testClasses[className].afterClass(testObject);
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "tearDownClass", exception);
+            failures ~= Entry(className, "afterClass", exception);
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "tearDownClass", throwable);
+            errors ~= Entry(className, "afterClass", throwable);
         }
     }
-    
+
     // report results
     writeln();
     if (failures.empty && errors.empty)
     {
         writeln();
-        printOk();
-        writefln(" (%d %s)", count, (count == 1) ? "Test" : "Tests");
+        writefln("%s (%d %s)", green("OK"), count, (count == 1) ? "Test" : "Tests");
         return 0;
     }
 
@@ -250,9 +276,8 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         {
             Throwable throwable = entry.throwable;
 
-            writefln("%d) %s(%s)%s@%s(%d): %s", i + 1, 
-                    entry.testName, entry.testClass, typeid(throwable).name,
-                    throwable.file, throwable.line, throwable.toString);
+            writefln("%d) %s(%s) %s", i + 1,
+                    entry.testName, entry.testClass, throwable.toString);
         }
     }
 
@@ -268,107 +293,70 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         {
             Throwable throwable = entry.throwable;
 
-            writefln("%d) %s(%s)%s@%s(%d): %s", i + 1, 
+            writefln("%d) %s(%s) %s@%s(%d): %s", i + 1,
                     entry.testName, entry.testClass, typeid(throwable).name,
                     throwable.file, throwable.line, throwable.msg);
         }
     }
 
     writeln();
-    printFailures();
-    writefln("Tests run: %d,  Failures: %d,  Errors: %d", count, failures.length, errors.length);
+    writeln(red("NOT OK"));
+    // FIXME Ignored
+    writefln("Tests run: %d, Failures: %d, Errors: %d", count, failures.length, errors.length);
     return (errors.length > 0) ? 2 : (failures.length > 0) ? 1 : 0;
 }
 
 version (Posix)
 {
-    private static bool _useColor = false;
+    private static string CSI = "\x1B[";
 
-    private static bool _useColorWasComputed = false;
+    private static string red(string source)
+    {
+        return canUseColor() ? CSI ~ "37;41;1m" ~ source ~ CSI ~ "0m" : source;
+    }
+
+    private static string green(string source)
+    {
+        return canUseColor() ? CSI ~ "37;42;1m" ~ source ~ CSI ~ "0m" : source;
+    }
+
+    private static string yellow(string source)
+    {
+        return canUseColor() ? CSI ~ "37;43;1m" ~ source ~ CSI ~ "0m" : source;
+    }
 
     private static bool canUseColor()
     {
-        if (!_useColorWasComputed)
+        static bool useColor = false;
+        static bool computed = false;
+
+        if (!computed)
         {
             // disable colors if the results output is written to a file or pipe instead of a tty
             import core.sys.posix.unistd;
 
-            _useColor = (isatty(stdout.fileno()) != 0);
-            _useColorWasComputed = true;
+            useColor = isatty(stdout.fileno()) != 0;
+            computed = true;
         }
-        return _useColor;
-    }
-
-    private static void startColorGreen()
-    {
-        if (canUseColor())
-        {
-            write("\x1B[1;37;42m");
-            stdout.flush();
-        }
-    }
-
-    private static void startColorRed()
-    {
-        if (canUseColor())
-        {
-            write("\x1B[1;37;41m");
-            stdout.flush();
-        }
-    }
-
-    private static void endColors()
-    {
-        if (canUseColor())
-        {
-            write("\x1B[0;;m");
-            stdout.flush();
-        }
+        return useColor;
     }
 }
 else
 {
-    private static void startColorGreen()
+    private static string red(string source)
     {
+        return source;
     }
 
-    private static void startColorRed()
+    private static string green(string source)
     {
+        return source;
     }
 
-    private static void endColors()
+    private static string yellow(string source)
     {
+        return source;
     }
-}
-
-private static void printDot()
-{
-    startColorGreen();
-    write(".");
-    stdout.flush();
-    endColors();
-}
-
-private static void printF()
-{
-    startColorRed();
-    write("F");
-    stdout.flush();
-    endColors();
-}
-private static void printOk()
-{
-    startColorGreen();
-    write("OK");
-    endColors();
-}
-
-private static void printFailures()
-{
-    startColorRed();
-    write("FAILURES!!!");
-    endColors();
-    writeln();
 }
 
 /**
@@ -380,16 +368,19 @@ public static int runTests_Tree(string[][string] testNamesByClass)
     int errorCount = 0;
 
     writeln("Unit tests: ");
-    foreach (string className; testNamesByClass.byKey)
+    foreach (className; testClassOrder)
     {
-        writeln("    " ~ className);
+        if (className !in testNamesByClass)
+            continue;
+
+        writeln("    ", className);
 
         // create test object
         Object testObject = null;
 
         try
         {
-            testObject = testCreators[className]();
+            testObject = testClasses[className].create();
         }
         catch (AssertException exception)
         {
@@ -399,8 +390,7 @@ public static int runTests_Tree(string[][string] testNamesByClass)
         }
         catch (Throwable throwable)
         {
-            writefln("        ERROR: this(): %s@%s(%d): %s",
-                    typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+            writeln("        ERROR: this(): ", throwable.toString);
             ++errorCount;
         }
         if (testObject is null)
@@ -409,42 +399,46 @@ public static int runTests_Tree(string[][string] testNamesByClass)
         // setUpClass
         try
         {
-            testCallers[className](testObject, "setUpClass");
+            testClasses[className].beforeClass(testObject);
         }
         catch (AssertException exception)
         {
-            writefln("        FAILURE: setUpClass(): %s@%s(%d): %s",
+            writefln("        FAILURE: beforeClass(): %s@%s(%d): %s",
                     typeid(exception).name, exception.file, exception.line, exception.msg);
             ++failureCount;
             continue;
         }
         catch (Throwable throwable)
         {
-            writefln("        ERROR: setUpClass(): %s@%s(%d): %s",
-                    typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+            writeln("        ERROR: beforeClass(): ", throwable.toString);
             ++errorCount;
             continue;
         }
 
         // Run each test of the class:
-        foreach (string testName; testNamesByClass[className])
+        foreach (testName; testNamesByClass[className])
         {
+            if (canFind(testClasses[className].ignoredTests, testName))
+            {
+                writeln("        IGNORE: ", testName, "()");
+                continue;
+            }
+
             // setUp
             try
             {
-                testCallers[className](testObject, "setUp");
+                testClasses[className].before(testObject);
             }
             catch (AssertException exception)
             {
-                writefln("        FAILURE: setUp(): %s@%s(%d): %s",
+                writefln("        FAILURE: before(): %s@%s(%d): %s",
                         typeid(exception).name, exception.file, exception.line, exception.msg);
                 ++failureCount;
                 continue;
             }
             catch (Throwable throwable)
             {
-                writefln("        ERROR: setUp(): %s@%s(%d): %s",
-                        typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+                writeln("        ERROR: before(): ", throwable.toString);
                 ++errorCount;
                 continue;
             }
@@ -453,7 +447,7 @@ public static int runTests_Tree(string[][string] testNamesByClass)
             try
             {
                 TickDuration startTime = TickDuration.currSystemTick();
-                testCallers[className](testObject, testName);
+                testClasses[className].test(testObject, testName);
                 double elapsedMs = (TickDuration.currSystemTick() - startTime).usecs() / 1000.0;
                 writefln("        OK: %6.2f ms  %s()", elapsedMs, testName);
             }
@@ -465,26 +459,24 @@ public static int runTests_Tree(string[][string] testNamesByClass)
             }
             catch (Throwable throwable)
             {
-                writefln("        ERROR: " ~ testName ~ "(): %s@%s(%d): %s",
-                        typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+                writeln("        ERROR: ", testName, "(): ", throwable.toString);
                 ++errorCount;
             }
 
             // tearDown (call anyways if test failed)
             try
             {
-                testCallers[className](testObject, "tearDown");
+                testClasses[className].after(testObject);
             }
             catch (AssertException exception)
             {
-                writefln("        FAILURE: tearDown(): %s@%s(%d): %s",
+                writefln("        FAILURE: after(): %s@%s(%d): %s",
                         typeid(exception).name, exception.file, exception.line, exception.msg);
                 ++failureCount;
             }
             catch (Throwable throwable)
             {
-                writefln("        ERROR: tearDown(): %s@%s(%d): %s",
-                        typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+                writeln("        ERROR: after(): ", throwable.toString);
                 ++errorCount;
             }
         }
@@ -492,158 +484,132 @@ public static int runTests_Tree(string[][string] testNamesByClass)
         // tearDownClass
         try
         {
-            testCallers[className](testObject, "tearDownClass");
+            testClasses[className].afterClass(testObject);
         }
         catch (AssertException exception)
         {
-            writefln("        FAILURE: tearDownClass(): %s@%s(%d): %s",
+            writefln("        FAILURE: afterClass(): %s@%s(%d): %s",
                     typeid(exception).name, exception.file, exception.line, exception.msg);
             ++failureCount;
         }
         catch (Throwable throwable)
         {
-            writefln("        ERROR: tearDownClass(): %s@%s(%d): %s",
-                    typeid(throwable).name, throwable.file, throwable.line, throwable.toString);
+            writeln("        ERROR: afterClass(): ", throwable.toString);
             ++errorCount;
         }
     }
     return (errorCount > 0) ? 2 : (failureCount > 0) ? 1 : 0;
 }
 
-
 /**
  * Registers a class as a unit test.
  */
-mixin template TestMixin()
+mixin template UnitTest()
 {
 
     public static this()
     {
-        // Names of test methods:
-        immutable(string[]) _testMethods = _testMethodsList!(
-                typeof(this), 
-                __traits(allMembers, typeof(this))
-        ).ret;
+        TestClass testClass;
 
-        // Factory method:
-        static Object createFunction()
-        { 
-            mixin("return (new " ~ typeof(this).stringof ~ "());");
-        }
+        testClass.tests = _memberFunctions!(typeof(this), Test,
+                __traits(allMembers, typeof(this))).result.dup;
+        testClass.ignoredTests = _memberFunctions!(typeof(this), Ignore,
+                __traits(allMembers, typeof(this))).result.dup;
 
-        // Run method:
-        // Generate a switch statement, that calls the method that matches the testName:
-        static void runTest(Object o, string testName)
+        static Object create()
         {
-            mixin(
-                generateRunTest!(typeof(this), __traits(allMembers, typeof(this)))
-            );
+            mixin("return new " ~ typeof(this).stringof ~ "();");
         }
 
-        // Register UnitTest class:
-        string className = this.classinfo.name;
-        testClasses ~= className;
-        testNamesByClass[className] = _testMethods.dup;
-        testCallers[className] = &runTest;
-        testCreators[className] = &createFunction;
+        static void beforeClass(Object o)
+        {
+            mixin(_sequence(_memberFunctions!(typeof(this), BeforeClass,
+                    __traits(allMembers, typeof(this))).result));
+        }
+
+        static void before(Object o)
+        {
+            mixin(_sequence(_memberFunctions!(typeof(this), Before,
+                    __traits(allMembers, typeof(this))).result));
+        }
+
+        static void test(Object o, string name)
+        {
+            mixin(_choice(_memberFunctions!(typeof(this), Test,
+              __traits(allMembers, typeof(this))).result));
+        }
+
+        static void after(Object o)
+        {
+            mixin(_sequence(_memberFunctions!(typeof(this), After,
+                    __traits(allMembers, typeof(this))).result));
+        }
+
+        static void afterClass(Object o)
+        {
+            mixin(_sequence(_memberFunctions!(typeof(this), AfterClass,
+                    __traits(allMembers, typeof(this))).result));
+        }
+
+        testClass.create = &create;
+        testClass.beforeClass = &beforeClass;
+        testClass.before = &before;
+        testClass.test = &test;
+        testClass.after = &after;
+        testClass.afterClass = &afterClass;
+
+        testClassOrder ~= this.classinfo.name;
+        testClasses[this.classinfo.name] = testClass;
     }
- 
-    private template _testMethodsList(T, args...)
+
+    private static string _choice(const string[] memberFunctions)
     {
-        static if (args.length == 0)
+        string block = "auto testObject = cast(" ~ typeof(this).stringof ~ ") o;\n";
+
+        block ~= "switch (name)\n{\n";
+        foreach (memberFunction; memberFunctions)
         {
-            immutable(string[]) ret = [];
+            block ~= `case "` ~ memberFunction ~ `": testObject.` ~ memberFunction ~ "(); break;\n";
+        }
+        block ~= "default: break;\n}\n";
+        return block;
+    }
+
+    private static string _sequence(const string[] memberFunctions)
+    {
+        string block = "auto testObject = cast(" ~ typeof(this).stringof ~ ") o;\n";
+
+        foreach (memberFunction; memberFunctions)
+        {
+            block ~= "testObject." ~ memberFunction ~ "();\n";
+        }
+        return block;
+    }
+
+    private template _memberFunctions(alias T, alias U, names...)
+    {
+        static if (names.length == 0)
+        {
+            immutable(string[]) result = [];
         }
         else
         {
-            // Skip strings that don't start with "test":
-            static if (args[0].length < 4 || args[0][0 .. 4] != "test"
-                || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
+            static if (_hasAttribute!(T, names[0], U) && __traits(compiles,
+                    mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()")))
             {
-                static if(args.length == 1)
-                {
-                    immutable(string[]) ret = [];
-                }
-                else
-                {
-                    immutable(string[]) ret = _testMethodsList!(T, args[1..$]).ret;
-                }
+                immutable(string[]) result = [names[0]] ~ _memberFunctions!(T, U, names[1 .. $]).result;
             }
             else
             {
-                // Return the first argument and the rest:
-                static if (args.length == 1)
-                {
-                    immutable(string[]) ret = [args[0]];
-                }
-                else
-                {
-                    static if (args.length > 1)
-                    {
-                        immutable(string[]) ret = [args[0]] ~ _testMethodsList!(T, args[1..$]).ret;
-                    }
-                    else
-                    {
-                        immutable(string[]) ret = [];
-                    }
-                }
+                immutable(string[]) result = _memberFunctions!(T, U, names[1 .. $]).result;
             }
         }
     }
 
-    /**
-     * Generates the function that runs a method from its name. 
-     */
-    private template generateRunTest(T, args...)
+    template _hasAttribute(alias T, string name, attribute)
     {
-        immutable(string) generateRunTest = 
-            T.stringof ~ " testObject = cast("~T.stringof~")o; "
-            ~"switch (testName) { "
-            ~generateRunTestImpl!(T, args).ret
-            ~"    default: break; "
-            ~"}";
+        enum _hasAttribute = staticIndexOf!(attribute,
+                __traits(getAttributes, __traits(getMember, T, name))) != -1;
     }
 
-    /** 
-     * Generates the case statements. 
-     */
-    private template generateRunTestImpl(T, args...)
-    {
-        static if (args.length == 0)
-        {
-            immutable(string) ret = "";
-        }
-        else
-        {
-            static if (!(args[0].length >= 4 && args[0][0 .. 4] == "test"
-                || args[0] == "setUp" || args[0] == "tearDown"
-                || args[0] == "setUpClass" || args[0] == "tearDownClass")
-                || !(__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ args[0] ~ "()")) ))
-            {
-                static if (args.length == 1)
-                {
-                    immutable(string) ret = "";
-                }
-                else
-                {
-                    immutable(string) ret = generateRunTestImpl!(T, args[1..$]).ret;
-                }
-            }
-            else
-            {
-                // Create the case statement that calls that test:
-                static if (args.length == 1)
-                {
-                    immutable(string) ret = 
-                        "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break; ";
-                }
-                else
-                {
-                    immutable(string) ret = 
-                        "case \"" ~ args[0] ~ "\": testObject." ~ args[0] ~ "(); break; "
-                        ~ generateRunTestImpl!(T, args[1..$]).ret;
-                }
-            }
-        }
-    }
 }

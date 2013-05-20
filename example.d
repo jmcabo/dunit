@@ -1,9 +1,5 @@
 #!/usr/bin/env rdmd
 
-/**
- * xUnit Testing Framework for the D Programming Language - examples
- */
-
 //          Copyright Juan Manuel Cabo 2012.
 //          Copyright Mario Kröplin 2013.
 // Distributed under the Boost Software License, Version 1.0.
@@ -23,9 +19,10 @@ import std.stdio;
 class Test
 {
 
-    mixin TestMixin;
+    mixin UnitTest;
 
-    public void testEqualsFailure()
+    @Test
+    public void assertEqualsFailure()
     {
         int expected = 42;
         int actual = 4 * 6;
@@ -33,7 +30,8 @@ class Test
         assertEquals(expected, actual);
     }
 
-    public void testArrayEqualsFailure()
+    @Test
+    public void assertArrayEqualsFailure()
     {
         int[] expected = [0, 1, 1, 2, 3];
         int[] actual = [0, 1, 2, 3];
@@ -51,38 +49,44 @@ class Test
 class TestFixture
 {
 
-    mixin TestMixin;
+    mixin UnitTest;
 
     public this()
     {
         writeln("this()");
     }
 
+    @BeforeClass
     public void setUpClass()
     {
         writeln("setUpClass()");
     }
 
+    @AfterClass
     public void tearDownClass()
     {
         writeln("tearDownClass()");
     }
 
+    @Before
     public void setUp()
     {
         writeln("setUp()");
     }
 
+    @After
     public void tearDown()
     {
         writeln("tearDown()");
     }
 
+    @Test
     public void test1()
     {
         writeln("test1()");
     }
 
+    @Test
     public void test2()
     {
         writeln("test2()");
@@ -96,8 +100,9 @@ class TestFixture
 class TestReuse : TestFixture
 {
 
-    mixin TestMixin;
+    mixin UnitTest;
 
+    @Before
     public override void setUp()
     {
         writeln("different setUp()");
@@ -111,31 +116,33 @@ class TestReuse : TestFixture
 class TestingThisAndThat
 {
 
-    mixin TestMixin;
-
-    // field name may start with "test"
-    private int test;
+    mixin UnitTest;
 
     // test function can have default arguments
+    @Test
     public void testResult(bool actual = true)
     {
         assertTrue(actual);
     }
 
     // test function can even be private
-    private void testSuccess()
+    @Test
+    private void success()
     {
         testResult(true);
     }
 
-    // disabled test function: name does not start with "test"
-    public void ignore_testFailure()
+    // disabled test function
+    @Test
+    @Ignore
+    public void failure()
     {
         testResult(false);
     }
 
     // failed contracts are errors, not failures
-    public void testError()
+    @Test
+    public void error()
     {
         assert(false);
     }
@@ -148,18 +155,20 @@ class TestingThisAndThat
 class TestingAsynchronousCode
 {
 
-    mixin TestMixin;
+    mixin UnitTest;
 
     private Thread thread;
 
     private bool done;
 
+    @Before
     public void setUp()
     {
         done = false;
         thread = new Thread(&threadFunction);
     }
 
+    @After
     public void tearDown()
     {
         thread.join();
@@ -171,6 +180,7 @@ class TestingAsynchronousCode
         done = true;
     }
 
+    @Test
     public void test()
     {
         assertFalse(done);
@@ -182,5 +192,5 @@ class TestingAsynchronousCode
 
 }
 
-// either use the 'DUnitMain' mixin or call 'dunit_main(args)'
-mixin DUnitMain;
+// either use the 'Main' mixin or call 'dunit_main(args)'
+mixin Main;
