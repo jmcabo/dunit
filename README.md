@@ -1,9 +1,12 @@
-xUnit Testing Framework for the D Programming Language
-======================================================
+xUnit Testing Framework for D
+=============================
 
 This is a simple implementation of the xUnit Testing Framework
 for the [D Programming Language](http://dlang.org).
-It enables the use of the [xUnit Test Patterns](http://xunitpatterns.com).
+It's based on [JUnit](http://junit.org) and it allows to organize tests
+according to the [xUnit Test Patterns](http://xunitpatterns.com).
+
+It's known to work with version D 2.062.
 
 Testing Functions vs. Interactions
 ----------------------------------
@@ -29,12 +32,12 @@ will report something like
 
     expected: <42> but was: <24>
 
-names of all failed test methods (as helpful as the naming of the test methods)
+names of all failed test methods (as helpful as the names of the test methods are expressive)
 
 User Defined Attributes
 -----------------------
 
-@Test, @Before, @After, @BeforeClass, @AfterClass, and @Ignore
+`@Test`, `@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore`
 
 instead of naming convention testLikeThis
 
@@ -55,6 +58,10 @@ selective test execution
     ./example.d --list
     ./example.d --filter testEqualsFailure
     ./example.d --filter testSuccess --filter testSuccess
+
+display usage
+
+    ./example.d --help
 
 comparing representations
 

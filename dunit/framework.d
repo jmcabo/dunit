@@ -14,9 +14,10 @@ import std.algorithm;
 import std.array;
 import std.conv;
 import std.getopt;
+import std.path;
 import std.regex;
 import std.stdio;
-public import std.typetuple;  // FIXME
+public import std.typetuple;
 
 struct TestClass
 {
@@ -57,7 +58,15 @@ public int dunit_main(string[] args)
 
     if (help)
     {
-        // TODO display usage
+        writefln("Usage: %s [options]", args.empty ? "testrunner" : baseName(args[0]));
+        writeln("Run the functions with @Test attribute of all classes that mix in UnitTest.");
+        writeln();
+        writeln("Options:");
+        writeln("  -f, --filter REGEX    Select test functions matching the regular expression");
+        writeln("                        Multiple selections are processed in sequence");
+        writeln("  -h, --help            Display usage information, then exit");
+        writeln("  -l, --list            Display the test functions, then exit");
+        writeln("  -v, --verbose         Display more information as the tests are run");
         return 0;
     }
 
@@ -110,13 +119,6 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         string testClass;
         string testName;
         Throwable throwable;
-
-        this(string testClass, string testName, Throwable throwable)
-        {
-            this.testClass = testClass;
-            this.testName = testName;
-            this.throwable = throwable;
-        }
     }
 
     Entry[] failures = null;
@@ -140,30 +142,33 @@ public static int runTests_Progress(string[][string] testNamesByClass)
             failures ~= Entry(className, "this", exception);
             write(red("F"));
             stdout.flush();
+            continue;
         }
         catch (Throwable throwable)
         {
             errors ~= Entry(className, "this", throwable);
             write(red("E"));
             stdout.flush();
+            continue;
         }
 
-        if (testObject is null)
-            continue;
-
-        // setUpClass
+        // set up class
         try
         {
             testClasses[className].beforeClass(testObject);
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "beforeClass", exception);
+            failures ~= Entry(className, "BeforeClass", exception);
+            write(red("F"));
+            stdout.flush();
             continue;
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "beforeClass", throwable);
+            errors ~= Entry(className, "BeforeClass", throwable);
+            write(red("E"));
+            stdout.flush();
             continue;
         }
 
@@ -179,7 +184,7 @@ public static int runTests_Progress(string[][string] testNamesByClass)
 
             ++count;
 
-            // setUp
+            // set up
             bool success = true;
 
             try
@@ -188,14 +193,14 @@ public static int runTests_Progress(string[][string] testNamesByClass)
             }
             catch (AssertException exception)
             {
-                failures ~= Entry(className, "before", exception);
+                failures ~= Entry(className, "Before", exception);
                 write(red("F"));
                 stdout.flush();
                 continue;
             }
             catch (Throwable throwable)
             {
-                errors ~= Entry(className, "before", throwable);
+                errors ~= Entry(className, "Before", throwable);
                 write(red("E"));
                 stdout.flush();
                 continue;
@@ -209,49 +214,51 @@ public static int runTests_Progress(string[][string] testNamesByClass)
             catch (AssertException exception)
             {
                 failures ~= Entry(className, testName, exception);
+                write(red("F"));
                 success = false;
             }
             catch (Throwable throwable)
             {
                 errors ~= Entry(className, testName, throwable);
+                write(red("E"));
                 success = false;
             }
 
-            // tearDown (even if test failed)
+            // tear down (even if test failed)
             try
             {
                 testClasses[className].after(testObject);
             }
             catch (AssertException exception)
             {
-                failures ~= Entry(className, "after", exception);
+                failures ~= Entry(className, "After", exception);
+                write(red("F"));
                 success = false;
             }
             catch (Throwable throwable)
             {
-                errors ~= Entry(className, "after", throwable);
+                errors ~= Entry(className, "After", throwable);
+                write(red("E"));
                 success = false;
             }
 
             if (success)
                 write(green("."));
-            else
-                write(red("F"));  // FIXME or "E"?
             stdout.flush();
         }
 
-        // tearDownClass
+        // tear down class
         try
         {
             testClasses[className].afterClass(testObject);
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "afterClass", exception);
+            failures ~= Entry(className, "AfterClass", exception);
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "afterClass", throwable);
+            errors ~= Entry(className, "AfterClass", throwable);
         }
     }
 
@@ -301,7 +308,6 @@ public static int runTests_Progress(string[][string] testNamesByClass)
 
     writeln();
     writeln(red("NOT OK"));
-    // FIXME Ignored
     writefln("Tests run: %d, Failures: %d, Errors: %d", count, failures.length, errors.length);
     return (errors.length > 0) ? 2 : (failures.length > 0) ? 1 : 0;
 }
@@ -396,26 +402,26 @@ public static int runTests_Tree(string[][string] testNamesByClass)
         if (testObject is null)
             continue;
 
-        // setUpClass
+        // set up class
         try
         {
             testClasses[className].beforeClass(testObject);
         }
         catch (AssertException exception)
         {
-            writefln("        FAILURE: beforeClass(): %s@%s(%d): %s",
+            writefln("        FAILURE: BeforeClass: %s@%s(%d): %s",
                     typeid(exception).name, exception.file, exception.line, exception.msg);
             ++failureCount;
             continue;
         }
         catch (Throwable throwable)
         {
-            writeln("        ERROR: beforeClass(): ", throwable.toString);
+            writeln("        ERROR: BeforeClass: ", throwable.toString);
             ++errorCount;
             continue;
         }
 
-        // Run each test of the class:
+        // run each test of the class
         foreach (testName; testNamesByClass[className])
         {
             if (canFind(testClasses[className].ignoredTests, testName))
@@ -424,21 +430,21 @@ public static int runTests_Tree(string[][string] testNamesByClass)
                 continue;
             }
 
-            // setUp
+            // set up
             try
             {
                 testClasses[className].before(testObject);
             }
             catch (AssertException exception)
             {
-                writefln("        FAILURE: before(): %s@%s(%d): %s",
+                writefln("        FAILURE: Before: %s@%s(%d): %s",
                         typeid(exception).name, exception.file, exception.line, exception.msg);
                 ++failureCount;
                 continue;
             }
             catch (Throwable throwable)
             {
-                writeln("        ERROR: before(): ", throwable.toString);
+                writeln("        ERROR: Before: ", throwable.toString);
                 ++errorCount;
                 continue;
             }
@@ -463,38 +469,38 @@ public static int runTests_Tree(string[][string] testNamesByClass)
                 ++errorCount;
             }
 
-            // tearDown (call anyways if test failed)
+            // tear down (call anyways if test failed)
             try
             {
                 testClasses[className].after(testObject);
             }
             catch (AssertException exception)
             {
-                writefln("        FAILURE: after(): %s@%s(%d): %s",
+                writefln("        FAILURE: After: %s@%s(%d): %s",
                         typeid(exception).name, exception.file, exception.line, exception.msg);
                 ++failureCount;
             }
             catch (Throwable throwable)
             {
-                writeln("        ERROR: after(): ", throwable.toString);
+                writeln("        ERROR: After: ", throwable.toString);
                 ++errorCount;
             }
         }
 
-        // tearDownClass
+        // tear down class
         try
         {
             testClasses[className].afterClass(testObject);
         }
         catch (AssertException exception)
         {
-            writefln("        FAILURE: afterClass(): %s@%s(%d): %s",
+            writefln("        FAILURE: AfterClass: %s@%s(%d): %s",
                     typeid(exception).name, exception.file, exception.line, exception.msg);
             ++failureCount;
         }
         catch (Throwable throwable)
         {
-            writeln("        ERROR: afterClass(): ", throwable.toString);
+            writeln("        ERROR: AfterClass: ", throwable.toString);
             ++errorCount;
         }
     }
@@ -594,8 +600,8 @@ mixin template UnitTest()
         }
         else
         {
-            static if (_hasAttribute!(T, names[0], U) && __traits(compiles,
-                    mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()")))
+            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
+                    && _hasAttribute!(T, names[0], U))
             {
                 immutable(string[]) result = [names[0]] ~ _memberFunctions!(T, U, names[1 .. $]).result;
             }

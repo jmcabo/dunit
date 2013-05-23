@@ -57,27 +57,27 @@ class TestFixture
     }
 
     @BeforeClass
-    public void setUpClass()
+    public static void setUpClass()
     {
-        writeln("setUpClass()");
+        writeln("BeforeClass");
     }
 
     @AfterClass
-    public void tearDownClass()
+    public static void tearDownClass()
     {
-        writeln("tearDownClass()");
+        writeln("AfterClass");
     }
 
     @Before
     public void setUp()
     {
-        writeln("setUp()");
+        writeln("Before");
     }
 
     @After
     public void tearDown()
     {
-        writeln("tearDown()");
+        writeln("After");
     }
 
     @Test
@@ -105,7 +105,7 @@ class TestReuse : TestFixture
     @Before
     public override void setUp()
     {
-        writeln("different setUp()");
+        writeln("Before override");
     }
 
 }
