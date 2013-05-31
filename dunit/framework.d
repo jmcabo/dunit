@@ -8,6 +8,7 @@ module dunit.framework;
 
 public import dunit.assertion;
 public import dunit.attributes;
+import dunit.color;
 
 import core.time;
 import std.algorithm;
@@ -103,32 +104,40 @@ public int dunit_main(string[] args)
         return 0;
     }
 
+    int result = 0;
+
     if (verbose)
-        return runTests_Tree(selectedTestNamesByClass);
+    {
+        auto reporter = new DetailReporter();
+
+        result = runTests(selectedTestNamesByClass, reporter);
+    }
     else
-        return runTests_Progress(selectedTestNamesByClass);
+    {
+        auto reporter = new ResultReporter();
+
+        result = runTests(selectedTestNamesByClass, reporter);
+        reporter.summarize;
+    }
+    return result;
 }
 
-/**
- * Runs all the unit tests, showing progress dots, and the results at the end.
- */
-public static int runTests_Progress(string[][string] testNamesByClass)
+public static int runTests(string[][string] testNamesByClass, TestListener testListener)
+in
 {
-    struct Entry
-    {
-        string testClass;
-        string testName;
-        Throwable throwable;
-    }
-
-    Entry[] failures = null;
-    Entry[] errors = null;
-    int count = 0;
+    assert(testListener !is null);
+}
+body
+{
+    bool failure = false;
+    bool error = false;
 
     foreach (className; testClassOrder)
     {
         if (className !in testNamesByClass)
             continue;
+
+        testListener.enterClass(className);
 
         // create test object
         Object testObject = null;
@@ -137,18 +146,10 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         {
             testObject = testClasses[className].create();
         }
-        catch (AssertException exception)
-        {
-            failures ~= Entry(className, "this", exception);
-            write(red("F"));
-            stdout.flush();
-            continue;
-        }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "this", throwable);
-            write(red("E"));
-            stdout.flush();
+            testListener.addError("this", throwable);
+            error = true;
             continue;
         }
 
@@ -159,16 +160,14 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "BeforeClass", exception);
-            write(red("F"));
-            stdout.flush();
+            testListener.addFailure("@BeforeClass", exception);
+            failure = true;
             continue;
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "BeforeClass", throwable);
-            write(red("E"));
-            stdout.flush();
+            testListener.addError("@BeforeClass", throwable);
+            error = true;
             continue;
         }
 
@@ -177,74 +176,71 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         {
             if (canFind(testClasses[className].ignoredTests, testName))
             {
-                write(yellow("I"));
-                stdout.flush();
+                testListener.skipTest(testName);
                 continue;
             }
 
-            ++count;
-
-            // set up
             bool success = true;
 
+            testListener.enterTest(testName);
+
+            // set up
             try
             {
                 testClasses[className].before(testObject);
             }
             catch (AssertException exception)
             {
-                failures ~= Entry(className, "Before", exception);
-                write(red("F"));
-                stdout.flush();
-                continue;
-            }
-            catch (Throwable throwable)
-            {
-                errors ~= Entry(className, "Before", throwable);
-                write(red("E"));
-                stdout.flush();
-                continue;
-            }
-
-            // test
-            try
-            {
-                testClasses[className].test(testObject, testName);
-            }
-            catch (AssertException exception)
-            {
-                failures ~= Entry(className, testName, exception);
-                write(red("F"));
+                testListener.addFailure("@Before", exception);
+                failure = true;
                 success = false;
             }
             catch (Throwable throwable)
             {
-                errors ~= Entry(className, testName, throwable);
-                write(red("E"));
-                success = false;
-            }
-
-            // tear down (even if test failed)
-            try
-            {
-                testClasses[className].after(testObject);
-            }
-            catch (AssertException exception)
-            {
-                failures ~= Entry(className, "After", exception);
-                write(red("F"));
-                success = false;
-            }
-            catch (Throwable throwable)
-            {
-                errors ~= Entry(className, "After", throwable);
-                write(red("E"));
+                testListener.addError("@Before", throwable);
+                error = true;
                 success = false;
             }
 
             if (success)
-                write(green("."));
-            stdout.flush();
+            {
+                // test
+                try
+                {
+                    testClasses[className].test(testObject, testName);
+                }
+                catch (AssertException exception)
+                {
+                    testListener.addFailure(testName, exception);
+                    failure = true;
+                    success = false;
+                }
+                catch (Throwable throwable)
+                {
+                    testListener.addError(testName, throwable);
+                    error = true;
+                    success = false;
+                }
+
+                // tear down (even if test failed)
+                try
+                {
+                    testClasses[className].after(testObject);
+                }
+                catch (AssertException exception)
+                {
+                    testListener.addFailure("@After", exception);
+                    failure = true;
+                    success = false;
+                }
+                catch (Throwable throwable)
+                {
+                    testListener.addError("@After", throwable);
+                    error = true;
+                    success = false;
+                }
+            }
+            testListener.exitTest(success);
         }
 
         // tear down class
@@ -254,257 +250,192 @@ public static int runTests_Progress(string[][string] testNamesByClass)
         }
         catch (AssertException exception)
         {
-            failures ~= Entry(className, "AfterClass", exception);
+            testListener.addFailure("@AfterClass", exception);
+            failure = true;
         }
         catch (Throwable throwable)
         {
-            errors ~= Entry(className, "AfterClass", throwable);
+            testListener.addError("@AfterClass", throwable);
+            error = true;
         }
     }
 
-    // report results
-    writeln();
-    if (failures.empty && errors.empty)
+    return error ? 2 : failure ? 1 : 0;
+}
+
+interface TestListener
+{
+
+    public void enterClass(string className);
+
+    public void enterTest(string testName);
+
+    public void skipTest(string testName);
+
+    public void addFailure(string subject, AssertException exception);
+
+    public void addError(string subject, Throwable throwable);
+
+    public void exitTest(bool success);
+
+}
+
+class ResultReporter : TestListener
+{
+
+    private struct Issue
+    {
+        string testClass;
+        string testName;
+        Throwable throwable;
+    }
+
+    private Issue[] failures = null;
+
+    private Issue[] errors = null;
+
+    private uint count = 0;
+
+    private string className;
+
+    public void enterClass(string className)
+    {
+        this.className = className;
+    }
+
+    public void enterTest(string testName)
+    {
+        ++this.count;
+    }
+
+    public void skipTest(string testName)
+    {
+        writec(Color.onYellow, "I");
+    }
+
+    public void addFailure(string subject, AssertException exception)
+    {
+        this.failures ~= Issue(this.className, subject, exception);
+        writec(Color.onRed, "F");
+    }
+
+    public void addError(string subject, Throwable throwable)
+    {
+        this.errors ~= Issue(this.className, subject, throwable);
+        writec(Color.onRed, "E");
+    }
+
+    public void exitTest(bool success)
+    {
+        if (success)
+        {
+            writec(Color.onGreen, ".");
+        }
+    }
+
+    public void summarize()
     {
         writeln();
-        writefln("%s (%d %s)", green("OK"), count, (count == 1) ? "Test" : "Tests");
-        return 0;
-    }
-
-    // report errors
-    if (!errors.empty)
-    {
-        if (errors.length == 1)
-            writeln("There was 1 error:");
-        else
-            writefln("There were %d errors:", errors.length);
-
-        foreach (i, entry; errors)
+        if (this.failures.empty && this.errors.empty)
         {
-            Throwable throwable = entry.throwable;
-
-            writefln("%d) %s(%s) %s", i + 1,
-                    entry.testName, entry.testClass, throwable.toString);
+            writeln();
+            writec(Color.onGreen, "OK");
+            writefln(" (%d %s)", this.count, (this.count == 1) ? "Test" : "Tests");
+            return;
         }
-    }
 
-    // report failures
-    if (!failures.empty)
-    {
-        if (failures.length == 1)
-            writeln("There was 1 failure:");
-        else
-            writefln("There were %d failures:", failures.length);
-
-        foreach (i, entry; failures)
+        // report errors
+        if (!this.errors.empty)
         {
-            Throwable throwable = entry.throwable;
+            writeln();
+            if (this.errors.length == 1)
+                writeln("There was 1 error:");
+            else
+                writefln("There were %d errors:", this.errors.length);
 
-            writefln("%d) %s(%s) %s@%s(%d): %s", i + 1,
-                    entry.testName, entry.testClass, typeid(throwable).name,
-                    throwable.file, throwable.line, throwable.msg);
+            foreach (i, issue; this.errors)
+            {
+                writefln("%d) %s(%s) %s", i + 1,
+                        issue.testName, issue.testClass, issue.throwable.toString);
+            }
         }
+
+        // report failures
+        if (!this.failures.empty)
+        {
+            writeln();
+            if (this.failures.length == 1)
+                writeln("There was 1 failure:");
+            else
+                writefln("There were %d failures:", this.failures.length);
+
+            foreach (i, issue; this.failures)
+            {
+                Throwable throwable = issue.throwable;
+
+                writefln("%d) %s(%s) %s@%s(%d): %s", i + 1,
+                        issue.testName, issue.testClass, typeid(throwable).name,
+                        throwable.file, throwable.line, throwable.msg);
+            }
+        }
+
+        writeln();
+        writec(Color.onRed, "NOT OK");
+        writeln();
+        writefln("Tests run: %d, Failures: %d, Errors: %d",
+                this.count, this.failures.length, this.errors.length);
     }
 
-    writeln();
-    writeln(red("NOT OK"));
-    writefln("Tests run: %d, Failures: %d, Errors: %d", count, failures.length, errors.length);
-    return (errors.length > 0) ? 2 : (failures.length > 0) ? 1 : 0;
 }
 
-version (Posix)
+class DetailReporter : TestListener
 {
-    private static string CSI = "\x1B[";
 
-    private static string red(string source)
+    private string testName;
+
+    private TickDuration startTime;
+
+    public void enterClass(string className)
     {
-        return canUseColor() ? CSI ~ "37;41;1m" ~ source ~ CSI ~ "0m" : source;
+        writeln(className);
     }
 
-    private static string green(string source)
+    public void enterTest(string testName)
     {
-        return canUseColor() ? CSI ~ "37;42;1m" ~ source ~ CSI ~ "0m" : source;
+        this.testName = testName;
+        this.startTime = TickDuration.currSystemTick();
     }
 
-    private static string yellow(string source)
+    public void skipTest(string testName)
     {
-        return canUseColor() ? CSI ~ "37;43;1m" ~ source ~ CSI ~ "0m" : source;
+        writec(Color.yellow, "    IGNORE: ");
+        writeln(testName);
     }
 
-    private static bool canUseColor()
+    public void addFailure(string subject, AssertException exception)
     {
-        static bool useColor = false;
-        static bool computed = false;
-
-        if (!computed)
-        {
-            // disable colors if the results output is written to a file or pipe instead of a tty
-            import core.sys.posix.unistd;
-
-            useColor = isatty(stdout.fileno()) != 0;
-            computed = true;
-        }
-        return useColor;
-    }
-}
-else
-{
-    private static string red(string source)
-    {
-        return source;
+        writec(Color.red, "    FAILURE: ");
+        writefln("%s: %s@%s(%d): %s", subject,
+                typeid(exception).name, exception.file, exception.line, exception.msg);
     }
 
-    private static string green(string source)
+    public void addError(string subject, Throwable throwable)
     {
-        return source;
+        writec(Color.red, "    ERROR: ");
+        writeln(subject, ": ", throwable.toString);
     }
 
-    private static string yellow(string source)
+    public void exitTest(bool success)
     {
-        return source;
-    }
-}
-
-/**
- * Runs all the unit tests, showing the test tree as the tests run.
- */
-public static int runTests_Tree(string[][string] testNamesByClass)
-{
-    int failureCount = 0;
-    int errorCount = 0;
-
-    writeln("Unit tests: ");
-    foreach (className; testClassOrder)
-    {
-        if (className !in testNamesByClass)
-            continue;
-
-        writeln("    ", className);
-
-        // create test object
-        Object testObject = null;
-
-        try
+        if (success)
         {
-            testObject = testClasses[className].create();
-        }
-        catch (AssertException exception)
-        {
-            writefln("        FAILURE: this(): %s@%s(%d): %s",
-                    typeid(exception).name, exception.file, exception.line, exception.msg);
-            ++failureCount;
-        }
-        catch (Throwable throwable)
-        {
-            writeln("        ERROR: this(): ", throwable.toString);
-            ++errorCount;
-        }
-        if (testObject is null)
-            continue;
+            double elapsed = (TickDuration.currSystemTick() - this.startTime).usecs() / 1000.0;
 
-        // set up class
-        try
-        {
-            testClasses[className].beforeClass(testObject);
-        }
-        catch (AssertException exception)
-        {
-            writefln("        FAILURE: BeforeClass: %s@%s(%d): %s",
-                    typeid(exception).name, exception.file, exception.line, exception.msg);
-            ++failureCount;
-            continue;
-        }
-        catch (Throwable throwable)
-        {
-            writeln("        ERROR: BeforeClass: ", throwable.toString);
-            ++errorCount;
-            continue;
-        }
-
-        // run each test of the class
-        foreach (testName; testNamesByClass[className])
-        {
-            if (canFind(testClasses[className].ignoredTests, testName))
-            {
-                writeln("        IGNORE: ", testName, "()");
-                continue;
-            }
-
-            // set up
-            try
-            {
-                testClasses[className].before(testObject);
-            }
-            catch (AssertException exception)
-            {
-                writefln("        FAILURE: Before: %s@%s(%d): %s",
-                        typeid(exception).name, exception.file, exception.line, exception.msg);
-                ++failureCount;
-                continue;
-            }
-            catch (Throwable throwable)
-            {
-                writeln("        ERROR: Before: ", throwable.toString);
-                ++errorCount;
-                continue;
-            }
-
-            // test
-            try
-            {
-                TickDuration startTime = TickDuration.currSystemTick();
-                testClasses[className].test(testObject, testName);
-                double elapsedMs = (TickDuration.currSystemTick() - startTime).usecs() / 1000.0;
-                writefln("        OK: %6.2f ms  %s()", elapsedMs, testName);
-            }
-            catch (AssertException exception)
-            {
-                writefln("        FAILURE: " ~ testName ~ "(): %s@%s(%d): %s",
-                        typeid(exception).name, exception.file, exception.line, exception.msg);
-                ++failureCount;
-            }
-            catch (Throwable throwable)
-            {
-                writeln("        ERROR: ", testName, "(): ", throwable.toString);
-                ++errorCount;
-            }
-
-            // tear down (call anyways if test failed)
-            try
-            {
-                testClasses[className].after(testObject);
-            }
-            catch (AssertException exception)
-            {
-                writefln("        FAILURE: After: %s@%s(%d): %s",
-                        typeid(exception).name, exception.file, exception.line, exception.msg);
-                ++failureCount;
-            }
-            catch (Throwable throwable)
-            {
-                writeln("        ERROR: After: ", throwable.toString);
-                ++errorCount;
-            }
-        }
-
-        // tear down class
-        try
-        {
-            testClasses[className].afterClass(testObject);
-        }
-        catch (AssertException exception)
-        {
-            writefln("        FAILURE: AfterClass: %s@%s(%d): %s",
-                    typeid(exception).name, exception.file, exception.line, exception.msg);
-            ++failureCount;
-        }
-        catch (Throwable throwable)
-        {
-            writeln("        ERROR: AfterClass: ", throwable.toString);
-            ++errorCount;
+            writec(Color.green, "    OK: ");
+            writefln("%6.2f ms  %s", elapsed, this.testName);
         }
     }
-    return (errorCount > 0) ? 2 : (failureCount > 0) ? 1 : 0;
+
 }
 
 /**

@@ -53,43 +53,43 @@ class TestFixture
 
     public this()
     {
-        writeln("this()");
+        debug writeln("@this()");
     }
 
     @BeforeClass
     public static void setUpClass()
     {
-        writeln("BeforeClass");
+        debug writeln("@BeforeClass");
     }
 
     @AfterClass
     public static void tearDownClass()
     {
-        writeln("AfterClass");
+        debug writeln("@AfterClass");
     }
 
     @Before
     public void setUp()
     {
-        writeln("Before");
+        debug writeln("@Before");
     }
 
     @After
     public void tearDown()
     {
-        writeln("After");
+        debug writeln("@After");
     }
 
     @Test
     public void test1()
     {
-        writeln("test1()");
+        debug writeln("@test1()");
     }
 
     @Test
     public void test2()
     {
-        writeln("test2()");
+        debug writeln("@test2()");
     }
 
 }
@@ -105,7 +105,7 @@ class TestReuse : TestFixture
     @Before
     public override void setUp()
     {
-        writeln("Before override");
+        debug writeln("@Before override");
     }
 
 }

@@ -3,23 +3,23 @@ xUnit Testing Framework for D
 
 This is a simple implementation of the xUnit Testing Framework
 for the [D Programming Language](http://dlang.org).
-It's based on [JUnit](http://junit.org) and it allows to organize tests
+Being based on [JUnit](http://junit.org) it allows to organize tests
 according to the [xUnit Test Patterns](http://xunitpatterns.com).
 
-It's known to work with version D 2.062.
+It's known to work with versions D 2.062 and D 2.063.
 
 Testing Functions vs. Interactions
 ----------------------------------
 
-The built-in support for unit tests in D is best suited for testing functions,
-when the individual test cases can be expressed as one-liners.
+D's built-in support for unit tests is best suited for testing functions,
+when the test cases can be expressed as one-liners.
 
 For testing interactions of objects, however, more support is required,
 for example, for setting up a test fixture.
 This is the responsibility of a testing framework.
 
-Reporting Failures and Errors
------------------------------
+Failures vs. Errors
+-------------------
 
 With no additional effort, specialized assertion functions report failures
 more helpful than violated contracts.
@@ -44,28 +44,30 @@ instead of naming convention testLikeThis
 Examples
 --------
 
-example run
+Run the included example to see the xUnit Testing Framework in action:
 
     ./example.d
-    ./example.d --verbose
+
+(When you get one error and two failures, everything works fine.)
 
 unittest functions testing the assertions
 
-    dmd -unittest example.d dunit/assertion.d dunit/framework.d
+    dmd -debug example.d dunit/assertion.d dunit/attributes.d dunit/framework.d
+    ./example --verbose
 
 selective test execution
 
     ./example.d --list
     ./example.d --filter testEqualsFailure
-    ./example.d --filter testSuccess --filter testSuccess
 
 display usage
 
     ./example.d --help
 
-comparing representations
+TODO
+----
 
-    assertEquals(to!string(expected), to!string(actual))
+more helpful string difference
 
 forked from [jmcabo/dunit](https://github.com/jmcabo/dunit); fixed issues; restructured
 

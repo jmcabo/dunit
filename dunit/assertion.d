@@ -41,6 +41,14 @@ void assertTrue(bool condition, lazy string msg = null,
     fail(msg, file, line);
 }
 
+///
+unittest
+{
+    assertTrue(true);
+    assertEquals("Assertion failure",
+            collectExceptionMsg!AssertException(assertTrue(false)));
+}
+
 /**
  * Asserts that a condition is false.
  * Throws: AssertException otherwise
@@ -55,12 +63,9 @@ void assertFalse(bool condition, lazy string msg = null,
     fail(msg, file, line);
 }
 
+///
 unittest
 {
-    assertTrue(true);
-    assertEquals("Assertion failure",
-            collectExceptionMsg!AssertException(assertTrue(false)));
-
     assertFalse(false);
     assertEquals("Assertion failure",
             collectExceptionMsg!AssertException(assertFalse(true)));
@@ -79,10 +84,11 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    fail(header ~ "expected: <" ~ to!string(expected) ~ "> but was: <"~ to!string(actual) ~ ">",
+    fail(header ~ "expected: <" ~ expected.to!string ~ "> but was: <"~ actual.to!string ~ ">",
             file, line);
 }
 
+///
 unittest
 {
     assertEquals("foo", "foo");
@@ -90,8 +96,8 @@ unittest
             collectExceptionMsg!AssertException(assertEquals("foo", "bar")));
 
     assertEquals(42, 42);
-    assertEquals("expected: <42> but was: <23>",
-            collectExceptionMsg!AssertException(assertEquals(42, 23)));
+    assertEquals("expected: <42> but was: <24>",
+            collectExceptionMsg!AssertException(assertEquals(42, 24)));
 
     assertEquals(42.0, 42.0);
 
@@ -117,7 +123,7 @@ void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, lazy string msg = null,
     foreach (index; 0 .. min(expecteds.length, actuals.length))
     {
         assertEquals(expecteds[index], actuals[index],
-                header ~ "array mismatch at index " ~ to!string(index),
+                header ~ "array mismatch at index " ~ index.to!string,
                 file, line);
     }
     assertEquals(expecteds.length, actuals.length,
@@ -125,6 +131,7 @@ void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, lazy string msg = null,
             file, line);
 }
 
+///
 unittest
 {
     int[] expecteds = [1, 2, 3];
@@ -153,6 +160,16 @@ void assertNull(T)(T actual, lazy string msg = null,
     fail(msg, file, line);
 }
 
+///
+unittest
+{
+    Object foo = new Object();
+
+    assertNull(null);
+    assertEquals("Assertion failure",
+            collectExceptionMsg!AssertException(assertNull(foo)));
+}
+
 /**
  * Asserts that the value is not null.
  * Throws: AssertException otherwise
@@ -167,13 +184,10 @@ void assertNotNull(T)(T actual, lazy string msg = null,
     fail(msg, file, line);
 }
 
+///
 unittest
 {
     Object foo = new Object();
-
-    assertNull(null);
-    assertEquals("Assertion failure",
-            collectExceptionMsg!AssertException(assertNull(foo)));
 
     assertNotNull(foo);
     assertEquals("Assertion failure",
@@ -193,8 +207,19 @@ void assertSame(T, U)(T expected, U actual, lazy string msg = null,
 
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    fail(header ~ "expected same: <" ~ to!string(expected) ~ "> was not: <"~ to!string(actual) ~ ">",
+    fail(header ~ "expected same: <" ~ expected.to!string ~ "> was not: <"~ actual.to!string ~ ">",
             file, line);
+}
+
+///
+unittest
+{
+    Object foo = new Object();
+    Object bar = new Object();
+
+    assertSame(foo, foo);
+    assertEquals("expected same: <object.Object> was not: <object.Object>",
+            collectExceptionMsg!AssertException(assertSame(foo, bar)));
 }
 
 /**
@@ -214,14 +239,11 @@ void assertNotSame(T, U)(T expected, U actual, lazy string msg = null,
             file, line);
 }
 
+///
 unittest
 {
     Object foo = new Object();
     Object bar = new Object();
-
-    assertSame(foo, foo);
-    assertEquals("expected same: <object.Object> was not: <object.Object>",
-            collectExceptionMsg!AssertException(assertSame(foo, bar)));
 
     assertNotSame(foo, bar);
     assertEquals("expected not same",
@@ -239,6 +261,7 @@ void fail(string msg = null,
     throw new AssertException(msg, file, line);
 }
 
+///
 unittest
 {
     assertEquals("Assertion failure",
@@ -279,6 +302,7 @@ public static void assertEventually(bool delegate() probe,
     }
 }
 
+///
 unittest
 {
     assertEventually({ static count = 0; return ++count > 42; });
