@@ -6,6 +6,8 @@
 
 module dunit.assertion;
 
+import dunit.diff;
+
 import core.thread;
 import core.time;
 import std.algorithm;
@@ -83,8 +85,9 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         return;
 
     string header = (msg.empty) ? null : msg ~ "; ";
+    auto desc = diff(expected.to!string, actual.to!string);
 
-    fail(header ~ "expected: <" ~ expected.to!string ~ "> but was: <"~ actual.to!string ~ ">",
+    fail(header ~ "expected: <" ~ desc[0] ~ "> but was: <" ~ desc[1] ~ ">",
             file, line);
 }
 
@@ -92,11 +95,11 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 unittest
 {
     assertEquals("foo", "foo");
-    assertEquals("expected: <foo> but was: <bar>",
-            collectExceptionMsg!AssertException(assertEquals("foo", "bar")));
+    assertEquals("expected: <ba[r]> but was: <ba[z]>",
+            collectExceptionMsg!AssertException(assertEquals("bar", "baz")));
 
     assertEquals(42, 42);
-    assertEquals("expected: <42> but was: <24>",
+    assertEquals("expected: <[42]> but was: <[24]>",
             collectExceptionMsg!AssertException(assertEquals(42, 24)));
 
     assertEquals(42.0, 42.0);
@@ -106,7 +109,7 @@ unittest
 
     assertEquals(foo, foo);
     assertEquals(bar, bar);
-    assertEquals("expected: <object.Object> but was: <null>",
+    assertEquals("expected: <[object.Object]> but was: <[null]>",
             collectExceptionMsg!AssertException(assertEquals(foo, bar)));
 }
 
@@ -138,11 +141,11 @@ unittest
     double[] actuals = [1, 2, 3];
 
     assertArrayEquals(expecteds, actuals);
-    assertEquals("array mismatch at index 1; expected: <2> but was: <2.3>",
+    assertEquals("array mismatch at index 1; expected: <2[]> but was: <2[.3]>",
             collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2.3])));
-    assertEquals("array length mismatch; expected: <3> but was: <2>",
+    assertEquals("array length mismatch; expected: <[3]> but was: <[2]>",
             collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2])));
-    assertEquals("array mismatch at index 2; expected: <r> but was: <z>",
+    assertEquals("array mismatch at index 2; expected: <[r]> but was: <[z]>",
             collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
 }
 
@@ -284,7 +287,7 @@ unittest
  * Throws: AssertException when the probe fails to become true before timeout
  */
 public static void assertEventually(bool delegate() probe,
-        Duration timeout = dur!"msecs"(500), Duration delay = dur!"msecs"(10),
+        Duration timeout = msecs(500), Duration delay = msecs(10),
         lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)

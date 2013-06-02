@@ -24,8 +24,8 @@ class Test
     @Test
     public void assertEqualsFailure()
     {
-        int expected = 42;
-        int actual = 4 * 6;
+        string expected = "bar";
+        string actual = "baz";
 
         assertEquals(expected, actual);
     }
@@ -176,7 +176,7 @@ class TestingAsynchronousCode
 
     private void threadFunction()
     {
-        Thread.sleep(dur!"msecs"(100));
+        Thread.sleep(msecs(100));
         done = true;
     }
 

@@ -26,11 +26,11 @@ more helpful than violated contracts.
 
 For example,
 
-    assertEquals(42, answer);
+    assertEquals("bar", "baz");
 
 will report something like
 
-    expected: <42> but was: <24>
+    expected: <"ba[r]"> but was: <"ba[z]">
 
 names of all failed test methods (as helpful as the names of the test methods are expressive)
 
