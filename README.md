@@ -6,40 +6,64 @@ for the [D Programming Language](http://dlang.org).
 Being based on [JUnit](http://junit.org) it allows to organize tests
 according to the [xUnit Test Patterns](http://xunitpatterns.com).
 
-It's known to work with versions D 2.062 and D 2.063.
+Looking for a replacement of
+[DUnit](http://www.dsource.org/projects/dmocks/wiki/DUnit) for D1,
+I found [jmcabo/dunit](https://github.com/jmcabo/dunit) promising.
+First, I had to fix some issues, but by now the original implementation
+has been largely revised.
+
+The xUnit Testing Framework is known to work with versions D 2.062 and D 2.063.
 
 Testing Functions vs. Interactions
 ----------------------------------
 
-D's built-in support for unit tests is best suited for testing functions,
+D's built-in support for unittests is best suited for testing functions,
 when the test cases can be expressed as one-liners.
+(Have a look at the documented unittests for the `dunit.assertion` functions.)
 
-For testing interactions of objects, however, more support is required,
-for example, for setting up a test fixture.
-This is the responsibility of a testing framework.
+But you're on your own, when you have to write a lot more code per test case,
+for example for testing interactions of objects.
+
+So, here is what the xUnit Testing Framework has to offer:
+- tests are organized in classes
+- tests are always named
+- tests can reuse a shared fixture
+- you see the progress as the tests are run
+- you see all failed tests at once
+- you get more information about failures
 
 Failures vs. Errors
 -------------------
 
-With no additional effort, specialized assertion functions report failures
-more helpful than violated contracts.
+Specialized assertion functions provide more information about failures than
+the built-in `assert` expression.
 
 For example,
 
     assertEquals("bar", "baz");
 
-will report something like
+will not only report the faulty value but will also highlight the difference:
 
-    expected: <"ba[r]"> but was: <"ba[z]">
+    expected: <ba[r]> but was: <ba[z]>
 
-names of all failed test methods (as helpful as the names of the test methods are expressive)
+Together with the expressive name of the test (that's your responsibility)
+this should be enough information for failures. On the other hand, for
+violated contracts and other exceptions from deep down the unit under test
+you may wish for the stack trace.
+
+That's why the xUnit Testing Framework distinguishes failures from errors,
+and why `dunit.assertion` doesn't use `AssertError` but introduces its own
+`AssertException`.
 
 User Defined Attributes
 -----------------------
 
-`@Test`, `@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore`
+Thanks to D's User Defined Attributes, test names no longer have to start with
+"test".
 
-instead of naming convention testLikeThis
+Put `mixin UnitTest;` in your test class and attach `@Test`,
+`@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore`
+(borrowed from JUnit 4) to the member functions to state their purpose.
 
 Examples
 --------
@@ -50,29 +74,16 @@ Run the included example to see the xUnit Testing Framework in action:
 
 (When you get one error and two failures, everything works fine.)
 
-unittest functions testing the assertions
+Have a look at the debug output of the example in "verbose" style:
 
-    dmd -debug example.d dunit/assertion.d dunit/attributes.d dunit/framework.d
-    ./example --verbose
+    rdmd -debug example.d --verbose
 
-selective test execution
+Or just focus on the issues:
 
-    ./example.d --list
-    ./example.d --filter testEqualsFailure
+    ./example.d --filter Test.assert --filter error
 
-display usage
+Next Steps
+----------
 
-    ./example.d --help
-
-TODO
-----
-
-more helpful string difference
-
-forked from [jmcabo/dunit](https://github.com/jmcabo/dunit); fixed issues; restructured
-
-not [D(1)Unit](http://www.dsource.org/projects/dmocks/wiki/DUnit) - allows to call (passed) test methods during setup
-
-won't fix [Issue 4653 - More unit test functions should be added](http://d.puremagic.com/issues/show_bug.cgi?id=4653)
-
-TODO: [Hamcrest](http://code.google.com/p/hamcrest/) Matchers and `assertThat`
+Integrate [Hamcrest](http://code.google.com/p/hamcrest/) Matchers
+and `assertThat`.

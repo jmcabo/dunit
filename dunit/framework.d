@@ -336,13 +336,6 @@ class ResultReporter : TestListener
     public void summarize()
     {
         writeln();
-        if (this.failures.empty && this.errors.empty)
-        {
-            writeln();
-            writec(Color.onGreen, "OK");
-            writefln(" (%d %s)", this.count, (this.count == 1) ? "Test" : "Tests");
-            return;
-        }
 
         // report errors
         if (!this.errors.empty)
@@ -379,11 +372,20 @@ class ResultReporter : TestListener
             }
         }
 
-        writeln();
-        writec(Color.onRed, "NOT OK");
-        writeln();
-        writefln("Tests run: %d, Failures: %d, Errors: %d",
-                this.count, this.failures.length, this.errors.length);
+        if (this.failures.empty && this.errors.empty)
+        {
+            writeln();
+            writec(Color.onGreen, "OK");
+            writefln(" (%d %s)", this.count, (this.count == 1) ? "Test" : "Tests");
+        }
+        else
+        {
+            writeln();
+            writec(Color.onRed, "NOT OK");
+            writeln();
+            writefln("Tests run: %d, Failures: %d, Errors: %d",
+                    this.count, this.failures.length, this.errors.length);
+        }
     }
 
 }
