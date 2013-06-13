@@ -17,24 +17,24 @@ version (Posix)
         {
             const string CSI = "\x1B[";
 
-            final switch (color)
+            final switch (color) with (Color)
             {
-                case Color.red:
+                case red:
                     stdout.write(CSI, "37;31;1m");
                     break;
-                case Color.green:
+                case green:
                     stdout.write(CSI, "37;32;1m");
                     break;
-                case Color.yellow:
+                case yellow:
                     stdout.write(CSI, "37;33;1m");
                     break;
-                case Color.onRed:
+                case onRed:
                     stdout.write(CSI, "37;41;1m");
                     break;
-                case Color.onGreen:
+                case onGreen:
                     stdout.write(CSI, "37;42;1m");
                     break;
-                case Color.onYellow:
+                case onYellow:
                     stdout.write(CSI, "37;43;1m");
                     break;
             }
@@ -78,29 +78,29 @@ version (Windows)
             CONSOLE_SCREEN_BUFFER_INFO info;
 
             GetConsoleScreenBufferInfo(handle, &info);
-            final switch (color)
+            final switch (color) with (Color)
             {
-                case Color.red:
+                case red:
                     SetConsoleTextAttribute(handle,
                             FOREGROUND_RED | FOREGROUND_INTENSITY);
                     break;
-                case Color.green:
+                case green:
                     SetConsoleTextAttribute(handle,
                             FOREGROUND_GREEN | FOREGROUND_INTENSITY);
                     break;
-                case Color.yellow:
+                case yellow:
                     SetConsoleTextAttribute(handle,
                             FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
                     break;
-                case Color.onRed:
+                case onRed:
                     SetConsoleTextAttribute(handle,
                             BACKGROUND_RED | BACKGROUND_INTENSITY);
                     break;
-                case Color.onGreen:
+                case onGreen:
                     SetConsoleTextAttribute(handle,
                             BACKGROUND_GREEN | BACKGROUND_INTENSITY);
                     break;
-                case Color.onYellow:
+                case onYellow:
                     SetConsoleTextAttribute(handle,
                             BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_INTENSITY);
                     break;
