@@ -82,6 +82,11 @@ Or just focus on the issues:
 
     ./example.d --filter Test.assert --filter error
 
+Alternatively, build and run the example using
+[dub](https://github.com/rejectedsoftware/dub):
+
+    dub --build=plain --config=example -- -verbose
+
 Next Steps
 ----------
 

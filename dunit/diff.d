@@ -15,7 +15,7 @@ import std.typecons;
 Tuple!(string, string) diff(string)(string lhs, string rhs)
 {
     const MAX_LENGTH = 20;
- 
+
     if (lhs == rhs)
         return tuple(lhs, rhs);
 
@@ -28,7 +28,7 @@ Tuple!(string, string) diff(string)(string lhs, string rhs)
     if (prefix.length > MAX_LENGTH)
         prefix = "..." ~ prefix[$ - MAX_LENGTH .. $];
     if (suffix.length > MAX_LENGTH)
-        suffix =  suffix[0 .. MAX_LENGTH] ~ "...";
+        suffix = suffix[0 .. MAX_LENGTH] ~ "...";
 
     return tuple(
             prefix ~ '[' ~ diff[0] ~ ']' ~ suffix,
@@ -44,7 +44,7 @@ unittest
     assert(diff("abc", "aBc") == tuple("a[b]c", "a[B]c"));
     assert(diff("abc", "abC") == tuple("ab[c]", "ab[C]"));
     assert(diff("abc", "") == tuple("[abc]", "[]"));
-    assert(diff("abc", "abbc") == tuple("ab[]c", "ab[b]c"));   
+    assert(diff("abc", "abbc") == tuple("ab[]c", "ab[b]c"));
     // abbreviate long prefix or suffix
     assert(diff("_12345678901234567890a", "_12345678901234567890A")
             == tuple("...12345678901234567890[a]", "...12345678901234567890[A]"));

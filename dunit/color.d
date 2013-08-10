@@ -12,7 +12,7 @@ enum Color { red, green, yellow, onRed, onGreen, onYellow }
 version (Posix)
 {
     public void writec(Color color, string text)
-    {    
+    {
         if (canUseColor())
         {
             const string CSI = "\x1B[";
@@ -48,17 +48,17 @@ version (Posix)
             stdout.flush();
         }
     }
-    
+
     private static bool canUseColor()
     {
         static bool useColor = false;
         static bool computed = false;
-    
+
         if (!computed)
         {
             // disable colors if the output is written to a file or pipe instead of a tty
             import core.sys.posix.unistd;
-    
+
             useColor = isatty(stdout.fileno()) != 0;
             computed = true;
         }
