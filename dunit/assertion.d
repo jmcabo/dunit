@@ -13,6 +13,7 @@ import core.time;
 import std.algorithm;
 import std.array;
 import std.conv;
+import std.string;
 
 version (unittest) import std.exception;
 
@@ -269,6 +270,34 @@ unittest
 {
     assertEquals("Assertion failure",
             collectExceptionMsg!AssertException(fail()));
+}
+
+/**
+ * Asserts that the condition (lhs op rhs) is satisfied.
+ * Throws: AssertException otherwise
+ * See_Also: http://d.puremagic.com/issues/show_bug.cgi?id=4653
+ */
+template assertOp(string op)
+{
+    void assertOp(T, U)(T lhs, U rhs, lazy string msg = null,
+            string file = __FILE__,
+            size_t line = __LINE__)
+    {
+        mixin("if (lhs " ~ op ~ " rhs) return;");
+    
+        string header = (msg.empty) ? null : msg ~ "; ";
+    
+        fail(format("%scondition (%s %s %s) not satisfied", header, lhs, op, rhs),
+                file, line);
+    }
+}
+
+///
+unittest
+{
+    assertOp!"<"(2, 3);
+    assertEquals("condition (2 >= 3) not satisfied",
+            collectExceptionMsg!AssertException(assertOp!">="(2, 3)));
 }
 
 /**
