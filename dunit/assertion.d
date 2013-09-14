@@ -151,6 +151,50 @@ unittest
 }
 
 /**
+ * Asserts that the value is empty.
+ * Throws: AssertException otherwise
+ */
+void assertEmpty(T)(T actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+{
+    if (actual.empty)
+        return;
+
+    fail(msg, file, line);
+}
+
+///
+unittest
+{
+    assertEmpty([]);
+    assertEquals("Assertion failure",
+            collectExceptionMsg!AssertException(assertEmpty([1, 2, 3])));
+}
+
+/**
+ * Asserts that the value is not empty.
+ * Throws: AssertException otherwise
+ */
+void assertNotEmpty(T)(T actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+{
+    if (!actual.empty)
+        return;
+
+    fail(msg, file, line);
+}
+
+///
+unittest
+{
+    assertNotEmpty([1, 2, 3]);
+    assertEquals("Assertion failure",
+            collectExceptionMsg!AssertException(assertNotEmpty([])));
+}
+
+/**
  * Asserts that the value is null.
  * Throws: AssertException otherwise
  */
@@ -284,9 +328,9 @@ template assertOp(string op)
             size_t line = __LINE__)
     {
         mixin("if (lhs " ~ op ~ " rhs) return;");
-    
+
         string header = (msg.empty) ? null : msg ~ "; ";
-    
+
         fail(format("%scondition (%s %s %s) not satisfied", header, lhs, op, rhs),
                 file, line);
     }
