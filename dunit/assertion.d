@@ -331,7 +331,7 @@ template assertOp(string op)
 
         string header = (msg.empty) ? null : msg ~ "; ";
 
-        fail(format("%scondition (%s %s %s) not satisfied", header, lhs, op, rhs),
+        fail("%scondition (%s %s %s) not satisfied".format(header, lhs, op, rhs),
                 file, line);
     }
 }

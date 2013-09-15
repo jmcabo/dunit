@@ -18,7 +18,6 @@ import std.stdio;
  */
 class Test
 {
-
     mixin UnitTest;
 
     @Test
@@ -38,6 +37,12 @@ class Test
 
         assertArrayEquals(expected, actual);
     }
+
+    @Test
+    public void assertOpFailure()
+    {
+        assertOp!"<"(6 * 7, 42);
+    }
 }
 
 /**
@@ -48,7 +53,6 @@ class Test
  */
 class TestFixture
 {
-
     mixin UnitTest;
 
     public this()
@@ -91,7 +95,6 @@ class TestFixture
     {
         debug writeln("@test2()");
     }
-
 }
 
 /**
@@ -99,7 +102,6 @@ class TestFixture
  */
 class TestReuse : TestFixture
 {
-
     mixin UnitTest;
 
     @Before
@@ -107,7 +109,6 @@ class TestReuse : TestFixture
     {
         debug writeln("@Before override");
     }
-
 }
 
 /**
@@ -115,7 +116,6 @@ class TestReuse : TestFixture
  */
 class TestingThisAndThat
 {
-
     mixin UnitTest;
 
     // test function can have default arguments
@@ -146,7 +146,6 @@ class TestingThisAndThat
     {
         assert(false);
     }
-
 }
 
 /**
@@ -154,7 +153,6 @@ class TestingThisAndThat
  */
 class TestingAsynchronousCode
 {
-
     mixin UnitTest;
 
     private Thread thread;
@@ -189,7 +187,6 @@ class TestingAsynchronousCode
 
         assertEventually({ return done; });
     }
-
 }
 
 // either use the 'Main' mixin or call 'dunit_main(args)'

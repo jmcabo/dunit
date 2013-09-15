@@ -76,6 +76,17 @@ Put `mixin UnitTest;` in your test class and attach `@Test`,
 `@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore`
 (borrowed from JUnit 4) to the member functions to state their purpose.
 
+Test Results
+------------
+
+Test results are reported while the tests are run. A "progress bar" is written
+with a "`.`" for each passed test, an "`F`" for each failure, an "`E`" for each
+error, and an "`I`" (ignore) for each skipped test.
+
+In addition, an XML test report is available that uses the JUnitReport format.
+The continuous integration tool [Jenkins](http://jenkins-ci.org), for example,
+understands the JUnitReport format and can be used to browse the test results.
+
 Examples
 --------
 
@@ -83,7 +94,7 @@ Run the included example to see the xUnit Testing Framework in action:
 
     ./example.d
 
-(When you get one error and two failures, everything works fine.)
+(When you get three failures, one error, and one skip, everything works fine.)
 
 Have a look at the debug output of the example in "verbose" style:
 
@@ -98,8 +109,12 @@ Alternatively, build and run the example using
 
     dub --build=plain --config=example -- --verbose
 
-Next Steps
-----------
+Related Projects
+----------------
 
-Integrate [Hamcrest](http://code.google.com/p/hamcrest/) Matchers
-and `assertThat`.
+- [DMocks-revived](https://github.com/QAston/DMocks-revived):
+  a mock-object framework that allows to mock interfaces or classes
+- [specd](https://github.com/jostly/specd):
+  a unit testing framework inspired by [specs2](http://etorreborre.github.io/specs2/) and [ScalaTest](http://www.scalatest.org)
+- [unit-threaded](https://github.com/atilaneves/unit-threaded):
+  a multi-threaded unit testing framework
