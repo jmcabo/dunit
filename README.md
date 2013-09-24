@@ -80,12 +80,13 @@ Test Results
 ------------
 
 Test results are reported while the tests are run. A "progress bar" is written
-with a "`.`" for each passed test, an "`F`" for each failure, an "`E`" for each
-error, and an "`I`" (ignore) for each skipped test.
+with a `.` for each passed test, an `F` for each failure, an `E` for each error,
+and an `I` (ignore) for each skipped test.
 
 In addition, an XML test report is available that uses the JUnitReport format.
 The continuous integration tool [Jenkins](http://jenkins-ci.org), for example,
-understands the JUnitReport format and can be used to browse the test results.
+understands this JUnitReport format. Thus, Jenkins can be used to browse
+test reports, track failures and errors, and even provide trends over time.
 
 Examples
 --------

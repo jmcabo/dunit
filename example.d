@@ -41,7 +41,7 @@ class Test
     @Test
     public void assertOpFailure()
     {
-        assertOp!"<"(6 * 7, 42);
+        assertLessThan(6 * 7, 42);
     }
 }
 

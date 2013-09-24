@@ -316,6 +316,11 @@ unittest
             collectExceptionMsg!AssertException(fail()));
 }
 
+alias assertOp!">" assertGreaterThan;
+alias assertOp!">=" assertGreaterThanOrEqual;
+alias assertOp!"<" assertLessThan;
+alias assertOp!"<=" assertLessThanOrEqual;
+
 /**
  * Asserts that the condition (lhs op rhs) is satisfied.
  * Throws: AssertException otherwise
