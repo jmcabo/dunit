@@ -44,18 +44,17 @@ For example,
 
 will not only report the faulty value but will also highlight the difference:
 
-    expected: <ba[r]> but was: <ba[z]>
+    expected: <ba<r>> but was: <ba<z>>
 
 The more general
 
-    assertOp!">="(a, b);
+    assertOp!">="(a, b);  // alias assertGreaterThanOrEqual
 
 (borrowed from
 [Issue 4653](http://d.puremagic.com/issues/show_bug.cgi?id=4653))
 will at least report the concrete values in case of a failure:
 
     condition (2 >= 3) not satisfied
-
 
 Together with the expressive name of the test (that's your responsibility)
 this should be enough information for failures. On the other hand, for

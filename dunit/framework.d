@@ -200,7 +200,7 @@ body
 
             if (ignore || !classSetUp)
             {
-                string reason = testClasses[className].ignoredTests[testName];
+                string reason = testClasses[className].ignoredTests.get(testName, null);
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
@@ -307,7 +307,7 @@ class IssueReporter : TestListener
 
     public void skip(string reason)
     {
-        writec(Color.onYellow, "I");
+        writec(Color.onYellow, "S");
     }
 
     public void addFailure(string phase, AssertException exception)
@@ -389,7 +389,7 @@ class DetailReporter : TestListener
 
     public void skip(string reason)
     {
-        writec(Color.yellow, "    IGNORE: ");
+        writec(Color.yellow, "    SKIP: ");
         writeln(this.testName);
         if (!reason.empty)
             writefln(`        "%s"`, reason);
@@ -689,33 +689,27 @@ mixin template UnitTest()
         {
             alias TypeTuple!(__traits(getMember, T, names[0])) member;
             alias TypeTuple!(__traits(getAttributes, member)) attributes;
+            enum index = _indexOfValue!(attribute, attributes);
 
-            static if (_canFindValue!(attribute, attributes))
-                immutable(string[]) _annotations = [names[0], _findValue!(attribute, attributes).reason]
+            static if (index != -1)
+                immutable(string[]) _annotations = [names[0], attributes[index].reason]
                         ~ _annotations!(T, attribute, names[1 .. $]);
             else
                 immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
         }
     }
 
-    private template _canFindValue(attribute, T...)
+    private template _indexOfValue(attribute, T...)
     {
         static if (T.length == 0)
-            enum bool _canFindValue = false;
+            enum _indexOfValue = -1;
         else
             static if (is(typeof(T[0]) : attribute))
-                enum bool _canFindValue = true;
+                enum _indexOfValue = 0;
             else
-                enum bool _canFindValue = _canFindValue!(attribute, T[1 .. $]);
-    }
-
-    private template _findValue(attribute, T...)
-    {
-        static assert(T.length > 0);
-
-        static if (is(typeof(T[0]) : attribute))
-            enum _findValue = T[0];
-        else
-            enum _findValue = _findValue!(attribute, T[1 .. $]);
+            {
+                enum index = _indexOfValue!(attribute, T[1 .. $]);
+                enum _indexOfValue = (index == -1) ? -1 : index + 1;
+            }
     }
 }

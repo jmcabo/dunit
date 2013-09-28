@@ -31,8 +31,8 @@ Tuple!(string, string) diff(string)(string lhs, string rhs)
         suffix = suffix[0 .. MAX_LENGTH] ~ "...";
 
     return tuple(
-            prefix ~ '[' ~ diff[0] ~ ']' ~ suffix,
-            prefix ~ '[' ~ diff[1] ~ ']' ~ suffix);
+            prefix ~ '<' ~ diff[0] ~ '>' ~ suffix,
+            prefix ~ '<' ~ diff[1] ~ '>' ~ suffix);
 }
 
 ///
