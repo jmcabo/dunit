@@ -14,19 +14,14 @@ import core.time;
 import std.algorithm;
 import std.array;
 import std.conv;
-import std.getopt;
-import std.file;
-import std.path;
-import std.regex;
 import std.stdio;
 import std.string;
 public import std.typetuple;
-import std.xml;
 
 struct TestClass
 {
     string[] tests;
-    string[] ignoredTests;
+    string[string] ignoredTests;
 
     Object function() create;
     void function(Object o) beforeClass;
@@ -49,6 +44,10 @@ mixin template Main()
 
 public int dunit_main(string[] args)
 {
+    import std.getopt;
+    import std.path;
+    import std.regex;
+
     string[] filters = null;
     bool help = false;
     bool list = false;
@@ -176,7 +175,7 @@ body
         foreach (testName; testNamesByClass[className])
         {
             bool success = true;
-            bool ignore = canFind(testClasses[className].ignoredTests, testName);
+            bool ignore = cast(bool)(testName in testClasses[className].ignoredTests);
 
             foreach (testListener; testListeners)
                 testListener.enterTest(testName);
@@ -201,8 +200,10 @@ body
 
             if (ignore || !classSetUp)
             {
+                string reason = testClasses[className].ignoredTests[testName];
+
                 foreach (testListener; testListeners)
-                    testListener.skip();
+                    testListener.skip(reason);
                 success = false;
                 continue;
             }
@@ -236,7 +237,7 @@ interface TestListener
 {
     public void enterClass(string className);
     public void enterTest(string testName);
-    public void skip();
+    public void skip(string reason);
     public void addFailure(string phase, AssertException exception);
     public void addError(string phase, Throwable throwable);
     public void exitTest(bool success);
@@ -304,7 +305,7 @@ class IssueReporter : TestListener
         this.testName = testName;
     }
 
-    public void skip()
+    public void skip(string reason)
     {
         writec(Color.onYellow, "I");
     }
@@ -386,10 +387,12 @@ class DetailReporter : TestListener
         this.startTime = TickDuration.currSystemTick();
     }
 
-    public void skip()
+    public void skip(string reason)
     {
         writec(Color.yellow, "    IGNORE: ");
         writeln(this.testName);
+        if (!reason.empty)
+            writefln(`        "%s"`, reason);
     }
 
     public void addFailure(string phase, AssertException exception)
@@ -441,7 +444,7 @@ class ResultReporter : TestListener
         ++this.tests;
     }
 
-    public void skip()
+    public void skip(string reason)
     {
         ++this.skips;
     }
@@ -482,6 +485,8 @@ class ResultReporter : TestListener
 
 class XmlReporter : TestListener
 {
+    import std.xml;
+
     private string fileName;
     private Document document;
     private Element testSuite;
@@ -512,12 +517,16 @@ class XmlReporter : TestListener
         this.startTime = TickDuration.currSystemTick();
     }
 
-    public void skip()
+    public void skip(string reason)
     {
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
         {
-            this.testCase ~= new Element("skipped");
+            auto element = new Element("skipped");
+
+            // FIXME encoding will be fixed in D 2.064
+            element.tag.attr["message"] = encode(encode(reason));
+            this.testCase ~= element;
         }
     }
 
@@ -526,13 +535,13 @@ class XmlReporter : TestListener
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
         {
-            auto failure = new Element("failure");
+            auto element = new Element("failure");
             string message = "%s %s: %s".format(phase,
                     description(exception), exception.msg);
 
             // FIXME encoding will be fixed in D 2.064
-            failure.tag.attr["message"] = encode(encode(message));
-            this.testCase ~= failure;
+            element.tag.attr["message"] = encode(encode(message));
+            this.testCase ~= element;
         }
     }
 
@@ -541,13 +550,13 @@ class XmlReporter : TestListener
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
         {
-            auto error = new Element("error", throwable.info.toString);
+            auto element = new Element("error", throwable.info.toString);
             string message = "%s %s: %s".format(phase,
                     description(throwable), throwable.msg);
 
             // FIXME encoding will be fixed in D 2.064
-            error.tag.attr["message"] = encode(encode(message));
-            this.testCase ~= error;
+            element.tag.attr["message"] = encode(encode(message));
+            this.testCase ~= element;
         }
     }
 
@@ -560,9 +569,11 @@ class XmlReporter : TestListener
 
     public void exit()
     {
+        import std.file;
+
         string report = join(this.document.pretty(4), "\n") ~ "\n";
 
-        std.file.write(this.fileName, report);
+        write(this.fileName, report);
     }
 }
 
@@ -571,14 +582,23 @@ class XmlReporter : TestListener
  */
 mixin template UnitTest()
 {
-    public static this()
+    private static this()
     {
-        TestClass testClass;
+        import std.range;
 
-        testClass.tests = _memberFunctions!(typeof(this), Test,
-                __traits(allMembers, typeof(this))).dup;
-        testClass.ignoredTests = _memberFunctions!(typeof(this), Ignore,
-                __traits(allMembers, typeof(this))).dup;
+        alias TypeTuple!(__traits(allMembers, typeof(this))) allMembers;
+
+        TestClass testClass;
+        string[] ignoredTests = _annotations!(typeof(this), Ignore, allMembers).dup;
+
+        testClass.tests = _memberFunctions!(typeof(this), Test, allMembers).dup;
+        foreach (chunk; chunks(ignoredTests, 2))
+        {
+            string testName = chunk[0];
+            string reason = chunk[1];
+
+            testClass.ignoredTests[testName] = reason;
+        }
 
         static Object create()
         {
@@ -587,32 +607,27 @@ mixin template UnitTest()
 
         static void beforeClass(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), BeforeClass,
-                    __traits(allMembers, typeof(this)))));
+            mixin(_sequence(_memberFunctions!(typeof(this), BeforeClass, allMembers)));
         }
 
         static void before(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), Before,
-                    __traits(allMembers, typeof(this)))));
+            mixin(_sequence(_memberFunctions!(typeof(this), Before, allMembers)));
         }
 
         static void test(Object o, string name)
         {
-            mixin(_choice(_memberFunctions!(typeof(this), Test,
-              __traits(allMembers, typeof(this)))));
+            mixin(_choice(_memberFunctions!(typeof(this), Test, allMembers)));
         }
 
         static void after(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), After,
-                    __traits(allMembers, typeof(this)))));
+            mixin(_sequence(_memberFunctions!(typeof(this), After, allMembers)));
         }
 
         static void afterClass(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), AfterClass,
-                    __traits(allMembers, typeof(this)))));
+            mixin(_sequence(_memberFunctions!(typeof(this), AfterClass, allMembers)));
         }
 
         testClass.create = &create;
@@ -632,9 +647,7 @@ mixin template UnitTest()
 
         block ~= "switch (name)\n{\n";
         foreach (memberFunction; memberFunctions)
-        {
             block ~= `case "` ~ memberFunction ~ `": testObject.` ~ memberFunction ~ "(); break;\n";
-        }
         block ~= "default: break;\n}\n";
         return block;
     }
@@ -644,35 +657,65 @@ mixin template UnitTest()
         string block = "auto testObject = cast(" ~ typeof(this).stringof ~ ") o;\n";
 
         foreach (memberFunction; memberFunctions)
-        {
             block ~= "testObject." ~ memberFunction ~ "();\n";
-        }
         return block;
     }
 
-    private template _memberFunctions(alias T, alias U, names...)
+    private template _memberFunctions(alias T, attribute, names...)
     {
         static if (names.length == 0)
-        {
             immutable(string[]) _memberFunctions = [];
-        }
+        else
+            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
+                    && _hasAttribute!(T, names[0], attribute))
+                immutable(string[]) _memberFunctions = [names[0]] ~ _memberFunctions!(T, attribute, names[1 .. $]);
+            else
+                immutable(string[]) _memberFunctions = _memberFunctions!(T, attribute, names[1 .. $]);
+    }
+
+    private template _hasAttribute(alias T, string name, attribute)
+    {
+        alias TypeTuple!(__traits(getMember, T, name)) member;
+        alias TypeTuple!(__traits(getAttributes, member)) attributes;
+
+        enum _hasAttribute = staticIndexOf!(attribute, attributes) != -1;
+    }
+
+    private template _annotations(alias T, attribute, names...)
+    {
+        static if (names.length == 0)
+            immutable(string[]) _annotations = [];
         else
         {
-            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
-                    && _hasAttribute!(T, names[0], U))
-            {
-                immutable(string[]) _memberFunctions = [names[0]] ~ _memberFunctions!(T, U, names[1 .. $]);
-            }
+            alias TypeTuple!(__traits(getMember, T, names[0])) member;
+            alias TypeTuple!(__traits(getAttributes, member)) attributes;
+
+            static if (_canFindValue!(attribute, attributes))
+                immutable(string[]) _annotations = [names[0], _findValue!(attribute, attributes).reason]
+                        ~ _annotations!(T, attribute, names[1 .. $]);
             else
-            {
-                immutable(string[]) _memberFunctions = _memberFunctions!(T, U, names[1 .. $]);
-            }
+                immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
         }
     }
 
-    template _hasAttribute(alias T, string name, attribute)
+    private template _canFindValue(attribute, T...)
     {
-        enum _hasAttribute = staticIndexOf!(attribute,
-                __traits(getAttributes, __traits(getMember, T, name))) != -1;
+        static if (T.length == 0)
+            enum bool _canFindValue = false;
+        else
+            static if (is(typeof(T[0]) : attribute))
+                enum bool _canFindValue = true;
+            else
+                enum bool _canFindValue = _canFindValue!(attribute, T[1 .. $]);
+    }
+
+    private template _findValue(attribute, T...)
+    {
+        static assert(T.length > 0);
+
+        static if (is(typeof(T[0]) : attribute))
+            enum _findValue = T[0];
+        else
+            enum _findValue = _findValue!(attribute, T[1 .. $]);
     }
 }

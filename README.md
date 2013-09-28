@@ -73,7 +73,7 @@ Thanks to D's User Defined Attributes, test names no longer have to start with
 "test".
 
 Put `mixin UnitTest;` in your test class and attach `@Test`,
-`@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore`
+`@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore("...")`
 (borrowed from JUnit 4) to the member functions to state their purpose.
 
 Test Results
@@ -117,5 +117,7 @@ Related Projects
   a mock-object framework that allows to mock interfaces or classes
 - [specd](https://github.com/jostly/specd):
   a unit testing framework inspired by [specs2](http://etorreborre.github.io/specs2/) and [ScalaTest](http://www.scalatest.org)
+- [DUnit](https://github.com/kalekold/dunit):
+  a toolkit of test assertions and a template mixin to enable mocking
 - [unit-threaded](https://github.com/atilaneves/unit-threaded):
   a multi-threaded unit testing framework

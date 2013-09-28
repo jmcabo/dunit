@@ -134,7 +134,7 @@ class TestingThisAndThat
 
     // disabled test function
     @Test
-    @Ignore
+    @Ignore("not ready yet")
     public void failure()
     {
         testResult(false);

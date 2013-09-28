@@ -4,5 +4,9 @@ enum After;
 enum AfterClass;
 enum Before;
 enum BeforeClass;
-enum Ignore;
 enum Test;
+
+struct Ignore
+{
+    string reason = null;
+}
