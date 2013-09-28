@@ -576,9 +576,9 @@ mixin template UnitTest()
         TestClass testClass;
 
         testClass.tests = _memberFunctions!(typeof(this), Test,
-                __traits(allMembers, typeof(this))).result.dup;
+                __traits(allMembers, typeof(this))).dup;
         testClass.ignoredTests = _memberFunctions!(typeof(this), Ignore,
-                __traits(allMembers, typeof(this))).result.dup;
+                __traits(allMembers, typeof(this))).dup;
 
         static Object create()
         {
@@ -588,31 +588,31 @@ mixin template UnitTest()
         static void beforeClass(Object o)
         {
             mixin(_sequence(_memberFunctions!(typeof(this), BeforeClass,
-                    __traits(allMembers, typeof(this))).result));
+                    __traits(allMembers, typeof(this)))));
         }
 
         static void before(Object o)
         {
             mixin(_sequence(_memberFunctions!(typeof(this), Before,
-                    __traits(allMembers, typeof(this))).result));
+                    __traits(allMembers, typeof(this)))));
         }
 
         static void test(Object o, string name)
         {
             mixin(_choice(_memberFunctions!(typeof(this), Test,
-              __traits(allMembers, typeof(this))).result));
+              __traits(allMembers, typeof(this)))));
         }
 
         static void after(Object o)
         {
             mixin(_sequence(_memberFunctions!(typeof(this), After,
-                    __traits(allMembers, typeof(this))).result));
+                    __traits(allMembers, typeof(this)))));
         }
 
         static void afterClass(Object o)
         {
             mixin(_sequence(_memberFunctions!(typeof(this), AfterClass,
-                    __traits(allMembers, typeof(this))).result));
+                    __traits(allMembers, typeof(this)))));
         }
 
         testClass.create = &create;
@@ -654,18 +654,18 @@ mixin template UnitTest()
     {
         static if (names.length == 0)
         {
-            immutable(string[]) result = [];
+            immutable(string[]) _memberFunctions = [];
         }
         else
         {
             static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
                     && _hasAttribute!(T, names[0], U))
             {
-                immutable(string[]) result = [names[0]] ~ _memberFunctions!(T, U, names[1 .. $]).result;
+                immutable(string[]) _memberFunctions = [names[0]] ~ _memberFunctions!(T, U, names[1 .. $]);
             }
             else
             {
-                immutable(string[]) result = _memberFunctions!(T, U, names[1 .. $]).result;
+                immutable(string[]) _memberFunctions = _memberFunctions!(T, U, names[1 .. $]);
             }
         }
     }
