@@ -40,14 +40,14 @@ unittest
 {
     assert(diff("abc", "abc") == tuple("abc", "abc"));
     // highlight difference
-    assert(diff("abc", "Abc") == tuple("[a]bc", "[A]bc"));
-    assert(diff("abc", "aBc") == tuple("a[b]c", "a[B]c"));
-    assert(diff("abc", "abC") == tuple("ab[c]", "ab[C]"));
-    assert(diff("abc", "") == tuple("[abc]", "[]"));
-    assert(diff("abc", "abbc") == tuple("ab[]c", "ab[b]c"));
+    assert(diff("abc", "Abc") == tuple("<a>bc", "<A>bc"));
+    assert(diff("abc", "aBc") == tuple("a<b>c", "a<B>c"));
+    assert(diff("abc", "abC") == tuple("ab<c>", "ab<C>"));
+    assert(diff("abc", "") == tuple("<abc>", "<>"));
+    assert(diff("abc", "abbc") == tuple("ab<>c", "ab<b>c"));
     // abbreviate long prefix or suffix
     assert(diff("_12345678901234567890a", "_12345678901234567890A")
-            == tuple("...12345678901234567890[a]", "...12345678901234567890[A]"));
+            == tuple("...12345678901234567890<a>", "...12345678901234567890<A>"));
     assert(diff("a12345678901234567890_", "A12345678901234567890_")
-            == tuple("[a]12345678901234567890...", "[A]12345678901234567890..."));
+            == tuple("<a>12345678901234567890...", "<A>12345678901234567890..."));
 }

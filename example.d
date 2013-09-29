@@ -1,4 +1,4 @@
-#!/usr/bin/env rdmd
+#!/usr/bin/env rdmd -unittest
 
 //          Copyright Juan Manuel Cabo 2012.
 //          Copyright Mario Kröplin 2013.
@@ -34,6 +34,15 @@ class Test
     {
         int[] expected = [0, 1, 1, 2, 3];
         int[] actual = [0, 1, 2, 3];
+
+        assertArrayEquals(expected, actual);
+    }
+
+    @Test
+    public void assertAssocArrayEqualsFailure()
+    {
+        string[int] expected = [1: "foo", 2: "bar"];
+        string[int] actual = [1: "foo", 2: "baz"];
 
         assertArrayEquals(expected, actual);
     }

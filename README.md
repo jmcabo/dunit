@@ -80,7 +80,7 @@ Test Results
 
 Test results are reported while the tests are run. A "progress bar" is written
 with a `.` for each passed test, an `F` for each failure, an `E` for each error,
-and an `I` (ignore) for each skipped test.
+and an `S` for each skipped test.
 
 In addition, an XML test report is available that uses the JUnitReport format.
 The continuous integration tool [Jenkins](http://jenkins-ci.org), for example,
@@ -94,7 +94,7 @@ Run the included example to see the xUnit Testing Framework in action:
 
     ./example.d
 
-(When you get three failures, one error, and one skip, everything works fine.)
+(When you get four failures, one error, and one skip, everything works fine.)
 
 Have a look at the debug output of the example in "verbose" style:
 

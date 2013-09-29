@@ -96,11 +96,11 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 unittest
 {
     assertEquals("foo", "foo");
-    assertEquals("expected: <ba[r]> but was: <ba[z]>",
+    assertEquals("expected: <ba<r>> but was: <ba<z>>",
             collectExceptionMsg!AssertException(assertEquals("bar", "baz")));
 
     assertEquals(42, 42);
-    assertEquals("expected: <[42]> but was: <[24]>",
+    assertEquals("expected: <<42>> but was: <<24>>",
             collectExceptionMsg!AssertException(assertEquals(42, 24)));
 
     assertEquals(42.0, 42.0);
@@ -110,7 +110,7 @@ unittest
 
     assertEquals(foo, foo);
     assertEquals(bar, bar);
-    assertEquals("expected: <[object.Object]> but was: <[null]>",
+    assertEquals("expected: <<object.Object>> but was: <<null>>",
             collectExceptionMsg!AssertException(assertEquals(foo, bar)));
 }
 
@@ -118,19 +118,19 @@ unittest
  * Asserts that the arrays are equal.
  * Throws: AssertException otherwise
  */
-void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, lazy string msg = null,
+void assertArrayEquals(T, U)(T[] expected, U[] actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    foreach (index; 0 .. min(expecteds.length, actuals.length))
+    foreach (index; 0 .. min(expected.length, actual.length))
     {
-        assertEquals(expecteds[index], actuals[index],
+        assertEquals(expected[index], actual[index],
                 header ~ "array mismatch at index " ~ index.to!string,
                 file, line);
     }
-    assertEquals(expecteds.length, actuals.length,
+    assertEquals(expected.length, actual.length,
             header ~ "array length mismatch",
             file, line);
 }
@@ -138,16 +138,52 @@ void assertArrayEquals(T, U)(T[] expecteds, U[] actuals, lazy string msg = null,
 ///
 unittest
 {
-    int[] expecteds = [1, 2, 3];
-    double[] actuals = [1, 2, 3];
+    double[] expected = [1, 2, 3];
 
-    assertArrayEquals(expecteds, actuals);
-    assertEquals("array mismatch at index 1; expected: <2[]> but was: <2[.3]>",
-            collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2.3])));
-    assertEquals("array length mismatch; expected: <[3]> but was: <[2]>",
-            collectExceptionMsg!AssertException(assertArrayEquals(expecteds, [1, 2])));
-    assertEquals("array mismatch at index 2; expected: <[r]> but was: <[z]>",
+    assertArrayEquals(expected, [1, 2, 3]);
+    assertEquals("array mismatch at index 1; expected: <2<>> but was: <2<.3>>",
+            collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2.3])));
+    assertEquals("array length mismatch; expected: <<3>> but was: <<2>>",
+            collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2])));
+    assertEquals("array mismatch at index 2; expected: <<r>> but was: <<z>>",
             collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
+}
+
+/**
+ * Asserts that the associative arrays are equal.
+ * Throws: AssertException otherwise
+ */
+void assertArrayEquals(T, U, V)(T[V] expected, U[V] actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+{
+    string header = (msg.empty) ? null : msg ~ "; ";
+
+    foreach (key; expected.byKey)
+        if (key in actual)
+        {
+            assertEquals(expected[key], actual[key],
+                    // format string key with double quotes
+                    format(header ~ `array mismatch at key %(%s%)`, [key]),
+                    file, line);
+        }
+
+    auto difference = setSymmetricDifference(expected.keys.sort, actual.keys.sort);
+
+    assertEmpty(difference,
+            "key mismatch; difference: %(%s, %)".format(difference));
+}
+
+///
+unittest
+{
+    double[string] expected = ["foo": 1, "bar": 2];
+
+    assertArrayEquals(expected, ["foo": 1, "bar": 2]);
+    assertEquals(`array mismatch at key "foo"; expected: <<1>> but was: <<2>>`,
+            collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 2])));
+    assertEquals(`key mismatch; difference: "bar"`,
+            collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 1])));
 }
 
 /**
