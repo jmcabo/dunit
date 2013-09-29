@@ -392,14 +392,14 @@ class DetailReporter : TestListener
         writec(Color.yellow, "    SKIP: ");
         writeln(this.testName);
         if (!reason.empty)
-            writefln(`        "%s"`, reason);
+            writeln(indent(`"%s"`.format(reason)));
     }
 
     public void addFailure(string phase, AssertException exception)
     {
         writec(Color.red, "    FAILURE: ");
         writeln(prettyOrigin(this.testName, phase));
-        writefln("        %s: %s", description(exception), exception.msg);
+        writeln(indent("%s: %s".format(description(exception), exception.msg)));
     }
 
     public void addError(string phase, Throwable throwable)
@@ -424,6 +424,11 @@ class DetailReporter : TestListener
     public void exit()
     {
         // do nothing
+    }
+
+    private string indent(string s, string indent = "        ")
+    {
+        return s.splitLines(KeepTerminator.yes).map!(line => indent ~ line).join;
     }
  }
 

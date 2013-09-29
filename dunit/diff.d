@@ -10,6 +10,30 @@ import std.range;
 import std.typecons;
 
 /**
+ * Returns a description of the difference between the strings.
+ */
+string description(string expected, string actual)
+{
+    const MAX_LENGTH = 20;
+    auto result = diff(expected, actual);
+    bool oneLiner = max(result[0].length, result[1].length) <= MAX_LENGTH
+            && !result[0].canFind("\n", "\r")
+            && !result[1].canFind("\n", "\r");
+
+    if (oneLiner)
+        return "expected: <" ~ result[0] ~ "> but was: <" ~ result[1] ~ ">";
+    else
+        return "expected:\n" ~ result[0] ~ "\nbut was:\n" ~ result[1];
+}
+
+///
+unittest
+{
+    assert(description("ab", "Ab") == "expected: <<a>b> but was: <<A>b>");
+    assert(description("a\nb", "A\nb") == "expected:\n<a>\nb\nbut was:\n<A>\nb");
+}
+
+/**
  * Returns a pair of strings that highlight the difference between lhs and rhs.
  */
 Tuple!(string, string) diff(string)(string lhs, string rhs)

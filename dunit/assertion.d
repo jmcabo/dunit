@@ -86,9 +86,8 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         return;
 
     string header = (msg.empty) ? null : msg ~ "; ";
-    auto desc = diff(expected.to!string, actual.to!string);
 
-    fail(header ~ "expected: <" ~ desc[0] ~ "> but was: <" ~ desc[1] ~ ">",
+    fail(header ~ description(expected.to!string, actual.to!string),
             file, line);
 }
 
