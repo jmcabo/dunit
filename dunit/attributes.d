@@ -8,5 +8,5 @@ enum Test;
 
 struct Ignore
 {
-    string reason = null;
+    string reason;
 }

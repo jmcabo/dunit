@@ -54,12 +54,20 @@ public int dunit_main(string[] args)
     string report = null;
     bool verbose = false;
 
-    getopt(args,
-            "filter|f", &filters,
-            "help|h", &help,
-            "list|l", &list,
-            "report", &report,
-            "verbose|v", &verbose);
+    try
+    {
+        getopt(args,
+                "filter|f", &filters,
+                "help|h", &help,
+                "list|l", &list,
+                "report", &report,
+                "verbose|v", &verbose);
+    }
+    catch (Exception exception)
+    {
+        stderr.writeln("error: ", exception.msg);
+        return 1;
+    }
 
     if (help)
     {
@@ -129,7 +137,7 @@ public int dunit_main(string[] args)
 
     testListeners ~= reporter;
     runTests(selectedTestNamesByClass, testListeners);
-    return (reporter.errors > 0) ? 2 : (reporter.failures > 0) ? 1 : 0;
+    return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
 }
 
 public static void runTests(string[][string] testNamesByClass, TestListener[] testListeners)
@@ -691,17 +699,20 @@ mixin template UnitTest()
         static if (names.length == 0)
             immutable(string[]) _annotations = [];
         else
-        {
-            alias TypeTuple!(__traits(getMember, T, names[0])) member;
-            alias TypeTuple!(__traits(getAttributes, member)) attributes;
-            enum index = _indexOfValue!(attribute, attributes);
+            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()")))
+            {
+                alias TypeTuple!(__traits(getMember, T, names[0])) member;
+                alias TypeTuple!(__traits(getAttributes, member)) attributes;
+                enum index = _indexOfValue!(attribute, attributes);
 
-            static if (index != -1)
-                immutable(string[]) _annotations = [names[0], attributes[index].reason]
-                        ~ _annotations!(T, attribute, names[1 .. $]);
+                static if (index != -1)
+                    immutable(string[]) _annotations = [names[0], attributes[index].reason]
+                            ~ _annotations!(T, attribute, names[1 .. $]);
+                else
+                    immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
+            }
             else
                 immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
-        }
     }
 
     private template _indexOfValue(attribute, T...)
