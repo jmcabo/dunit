@@ -6,8 +6,8 @@
 
 module dunit.framework;
 
-public import dunit.assertion;
-public import dunit.attributes;
+import dunit.assertion;
+import dunit.attributes;
 import dunit.color;
 
 import core.time;
@@ -33,6 +33,12 @@ struct TestClass
 
 string[] testClassOrder;
 TestClass[string] testClasses;
+
+struct TestSelection
+{
+    string className;
+    string[] testNames;
+}
 
 mixin template Main()
 {
@@ -84,30 +90,46 @@ public int dunit_main(string[] args)
         return 0;
     }
 
-    string[][string] selectedTestNamesByClass = null;
+    TestSelection[] testSelections = null;
 
     if (filters is null)
-        filters = [null];
-
-    foreach (filter; filters)
     {
         foreach (className; testClassOrder)
         {
-            foreach (testName; testClasses[className].tests)
-            {
-                string fullyQualifiedName = className ~ '.' ~ testName;
+            string[] testNames = testClasses[className].tests;
 
-                if (match(fullyQualifiedName, filter))
-                    selectedTestNamesByClass[className] ~= testName;
+            testSelections ~= TestSelection(className, testNames);
+        }
+    }
+    else
+    {
+        foreach (filter; filters)
+        {
+            foreach (className; testClassOrder)
+            {
+                foreach (testName; testClasses[className].tests)
+                {
+                    string fullyQualifiedName = className ~ '.' ~ testName;
+
+                    if (match(fullyQualifiedName, filter))
+                    {
+                        auto result = testSelections.find!"a.className == b"(className);
+
+                        if (result.empty)
+                            testSelections ~= TestSelection(className, [testName]);
+                        else
+                            result.front.testNames ~= testName;
+                    }
+                }
             }
         }
     }
 
     if (list)
     {
-        foreach (className; testClassOrder)
+        foreach (testSelection; testSelections) with (testSelection)
         {
-            foreach (testName; selectedTestNamesByClass.get(className, null))
+            foreach (testName; testNames)
             {
                 string fullyQualifiedName = className ~ '.' ~ testName;
 
@@ -136,11 +158,11 @@ public int dunit_main(string[] args)
     auto reporter = new ResultReporter();
 
     testListeners ~= reporter;
-    runTests(selectedTestNamesByClass, testListeners);
+    runTests(testSelections, testListeners);
     return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
 }
 
-public static void runTests(string[][string] testNamesByClass, TestListener[] testListeners)
+public static void runTests(TestSelection[] testSelections, TestListener[] testListeners)
 in
 {
     assert(all!"a !is null"(testListeners));
@@ -168,11 +190,8 @@ body
         }
     }
 
-    foreach (className; testClassOrder)
+    foreach (testSelection; testSelections) with (testSelection)
     {
-        if (className !in testNamesByClass)
-            continue;
-
         foreach (testListener; testListeners)
             testListener.enterClass(className);
 
@@ -180,7 +199,7 @@ body
         bool classSetUp = true;  // not yet failed
 
         // run each @Test of the class
-        foreach (testName; testNamesByClass[className])
+        foreach (testName; testNames)
         {
             bool success = true;
             bool ignore = cast(bool)(testName in testClasses[className].ignoredTests);
@@ -537,8 +556,7 @@ class XmlReporter : TestListener
         {
             auto element = new Element("skipped");
 
-            // FIXME encoding will be fixed in D 2.064
-            element.tag.attr["message"] = encode(encode(reason));
+            element.tag.attr["message"] = reason;
             this.testCase ~= element;
         }
     }
@@ -552,8 +570,7 @@ class XmlReporter : TestListener
             string message = "%s %s: %s".format(phase,
                     description(exception), exception.msg);
 
-            // FIXME encoding will be fixed in D 2.064
-            element.tag.attr["message"] = encode(encode(message));
+            element.tag.attr["message"] = message;
             this.testCase ~= element;
         }
     }
@@ -567,8 +584,7 @@ class XmlReporter : TestListener
             string message = "%s %s: %s".format(phase,
                     description(throwable), throwable.msg);
 
-            // FIXME encoding will be fixed in D 2.064
-            element.tag.attr["message"] = encode(encode(message));
+            element.tag.attr["message"] = message;
             this.testCase ~= element;
         }
     }

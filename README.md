@@ -12,7 +12,7 @@ I found [jmcabo/dunit](https://github.com/jmcabo/dunit) promising.
 First, I had to fix some issues, but by now the original implementation
 has been largely revised.
 
-The xUnit Testing Framework is known to work with versions D 2.062 and D 2.063.
+The xUnit Testing Framework is known to work with version D 2.064.2.
 
 Testing Functions vs. Interactions
 ----------------------------------

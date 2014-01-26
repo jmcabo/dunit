@@ -14,6 +14,7 @@ import std.algorithm;
 import std.array;
 import std.conv;
 import std.string;
+import std.traits;
 
 version (unittest) import std.exception;
 
@@ -75,12 +76,13 @@ unittest
 }
 
 /**
- * Asserts that the values are equal.
+ * Asserts that the string values are equal.
  * Throws: AssertException otherwise
  */
 void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
+    if (isSomeString!T)
 {
     if (expected == actual)
         return;
@@ -97,9 +99,31 @@ unittest
     assertEquals("foo", "foo");
     assertEquals("expected: <ba<r>> but was: <ba<z>>",
             collectExceptionMsg!AssertException(assertEquals("bar", "baz")));
+}
 
+/**
+ * Asserts that the string values are equal.
+ * Throws: AssertException otherwise
+ */
+void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+    if (!isSomeString!T)
+{
+    if (expected == actual)
+        return;
+
+    string header = (msg.empty) ? null : msg ~ "; ";
+
+    fail(header ~ "expected: <" ~ expected.to!string ~ "> but was: <"~ actual.to!string ~ ">",
+            file, line);
+}
+
+///
+unittest
+{
     assertEquals(42, 42);
-    assertEquals("expected: <<42>> but was: <<24>>",
+    assertEquals("expected: <42> but was: <24>",
             collectExceptionMsg!AssertException(assertEquals(42, 24)));
 
     assertEquals(42.0, 42.0);
@@ -109,7 +133,7 @@ unittest
 
     assertEquals(foo, foo);
     assertEquals(bar, bar);
-    assertEquals("expected: <<object.Object>> but was: <<null>>",
+    assertEquals("expected: <object.Object> but was: <null>",
             collectExceptionMsg!AssertException(assertEquals(foo, bar)));
 }
 
@@ -140,11 +164,11 @@ unittest
     double[] expected = [1, 2, 3];
 
     assertArrayEquals(expected, [1, 2, 3]);
-    assertEquals("array mismatch at index 1; expected: <2<>> but was: <2<.3>>",
+    assertEquals("array mismatch at index 1; expected: <2> but was: <2.3>",
             collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2.3])));
-    assertEquals("array length mismatch; expected: <<3>> but was: <<2>>",
+    assertEquals("array length mismatch; expected: <3> but was: <2>",
             collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2])));
-    assertEquals("array mismatch at index 2; expected: <<r>> but was: <<z>>",
+    assertEquals("array mismatch at index 2; expected: <r> but was: <z>",
             collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
 }
 
@@ -179,7 +203,7 @@ unittest
     double[string] expected = ["foo": 1, "bar": 2];
 
     assertArrayEquals(expected, ["foo": 1, "bar": 2]);
-    assertEquals(`array mismatch at key "foo"; expected: <<1>> but was: <<2>>`,
+    assertEquals(`array mismatch at key "foo"; expected: <1> but was: <2>`,
             collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 2])));
     assertEquals(`key mismatch; difference: "bar"`,
             collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 1])));

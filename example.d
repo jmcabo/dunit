@@ -8,7 +8,7 @@
 
 module example;
 
-import dunit.framework;
+import dunit;
 import core.thread;
 import core.time;
 import std.stdio;
