@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2013.
+//          Copyright Mario Kröplin 2014.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -615,7 +615,7 @@ mixin template UnitTest()
     {
         import std.range;
 
-        alias TypeTuple!(__traits(allMembers, typeof(this))) allMembers;
+        alias allMembers = TypeTuple!(__traits(allMembers, typeof(this)));
 
         TestClass testClass;
         string[] ignoredTests = _annotations!(typeof(this), Ignore, allMembers).dup;
@@ -704,8 +704,8 @@ mixin template UnitTest()
 
     private template _hasAttribute(alias T, string name, attribute)
     {
-        alias TypeTuple!(__traits(getMember, T, name)) member;
-        alias TypeTuple!(__traits(getAttributes, member)) attributes;
+        alias member = TypeTuple!(__traits(getMember, T, name));
+        alias attributes = TypeTuple!(__traits(getAttributes, member));
 
         enum _hasAttribute = staticIndexOf!(attribute, attributes) != -1;
     }
@@ -717,8 +717,8 @@ mixin template UnitTest()
         else
             static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()")))
             {
-                alias TypeTuple!(__traits(getMember, T, names[0])) member;
-                alias TypeTuple!(__traits(getAttributes, member)) attributes;
+                alias member = TypeTuple!(__traits(getMember, T, names[0]));
+                alias attributes = TypeTuple!(__traits(getAttributes, member));
                 enum index = _indexOfValue!(attribute, attributes);
 
                 static if (index != -1)
