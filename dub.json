@@ -1,0 +1,19 @@
+{
+    "name": "dunit",
+    "description": "xUnit Testing Framework for D",
+    "copyright": "Copyright © 2013, Mario Kröplin",
+    "authors": ["Juan Manuel Cabo", "Mario Kröplin"],
+    "dependencies": {},
+    "configurations":
+    [
+        {
+            "name": "library",
+            "targetType": "library"
+        },
+        {
+            "name": "example",
+            "targetType": "executable",
+            "sourceFiles": ["example.d"]
+        }
+    ]
+}
