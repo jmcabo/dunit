@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2013.
+//          Copyright Mario Kröplin 2014.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -13,6 +13,7 @@ import core.time;
 import std.algorithm;
 import std.array;
 import std.conv;
+import std.range;
 import std.string;
 import std.traits;
 
@@ -115,7 +116,7 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    fail(header ~ "expected: <" ~ expected.to!string ~ "> but was: <"~ actual.to!string ~ ">",
+    fail(header ~ format("expected: <%s> but was: <%s>", expected, actual),
             file, line);
 }
 
@@ -145,31 +146,9 @@ void assertArrayEquals(T, U)(T[] expected, U[] actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
-    string header = (msg.empty) ? null : msg ~ "; ";
-
-    foreach (index; 0 .. min(expected.length, actual.length))
-    {
-        assertEquals(expected[index], actual[index],
-                header ~ "array mismatch at index " ~ index.to!string,
-                file, line);
-    }
-    assertEquals(expected.length, actual.length,
-            header ~ "array length mismatch",
+    assertRangeEquals(expected, actual,
+            msg,
             file, line);
-}
-
-///
-unittest
-{
-    double[] expected = [1, 2, 3];
-
-    assertArrayEquals(expected, [1, 2, 3]);
-    assertEquals("array mismatch at index 1; expected: <2> but was: <2.3>",
-            collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2.3])));
-    assertEquals("array length mismatch; expected: <3> but was: <2>",
-            collectExceptionMsg!AssertException(assertArrayEquals(expected, [1, 2])));
-    assertEquals("array mismatch at index 2; expected: <r> but was: <z>",
-            collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
 }
 
 /**
@@ -187,7 +166,7 @@ void assertArrayEquals(T, U, V)(T[V] expected, U[V] actual, lazy string msg = nu
         {
             assertEquals(expected[key], actual[key],
                     // format string key with double quotes
-                    format(header ~ `array mismatch at key %(%s%)`, [key]),
+                    format(header ~ "mismatch at key %(%s%)", [key]),
                     file, line);
         }
 
@@ -203,10 +182,54 @@ unittest
     double[string] expected = ["foo": 1, "bar": 2];
 
     assertArrayEquals(expected, ["foo": 1, "bar": 2]);
-    assertEquals(`array mismatch at key "foo"; expected: <1> but was: <2>`,
+    assertEquals(`mismatch at key "foo"; expected: <1> but was: <2>`,
             collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 2])));
     assertEquals(`key mismatch; difference: "bar"`,
             collectExceptionMsg!AssertException(assertArrayEquals(expected, ["foo": 1])));
+}
+
+/**
+ * Asserts that the ranges are equal.
+ * Throws: AssertException otherwise
+ */
+void assertRangeEquals(R1, R2)(R1 expected, R2 actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+    if (isInputRange!R1 && isInputRange!R2 && is(typeof(expected.front == actual.front)))
+{
+    string header = (msg.empty) ? null : msg ~ "; ";
+    size_t index = 0;
+
+    for (; !expected.empty && ! actual.empty; ++index, expected.popFront, actual.popFront)
+    {
+        assertEquals(expected.front, actual.front,
+                header ~ format("mismatch at index %s", index),
+                file, line);
+    }
+    assertEmpty(expected,
+            header ~ format("length mismatch at index %s; ", index) ~
+            format("expected: <%s> but was: empty", expected.front),
+            file, line);
+    assertEmpty(actual,
+            header ~ format("length mismatch at index %s; ", index) ~
+            format("expected: empty but was: <%s>", actual.front),
+            file, line);
+}
+
+///
+unittest
+{
+    double[] expected = [0, 1];
+
+    assertRangeEquals(expected, [0, 1]);
+    assertEquals("mismatch at index 1; expected: <1> but was: <1.2>",
+            collectExceptionMsg!AssertException(assertRangeEquals(expected, [0, 1.2, 3])));
+    assertEquals("length mismatch at index 1; expected: <1> but was: empty",
+            collectExceptionMsg!AssertException(assertRangeEquals(expected, [0])));
+    assertEquals("length mismatch at index 2; expected: empty but was: <2>",
+            collectExceptionMsg!AssertException(assertRangeEquals(expected, [0, 1, 2])));
+    assertEquals("mismatch at index 2; expected: <r> but was: <z>",
+            collectExceptionMsg!AssertException(assertArrayEquals("bar", "baz")));
 }
 
 /**
@@ -314,7 +337,7 @@ void assertSame(T, U)(T expected, U actual, lazy string msg = null,
 
     string header = (msg.empty) ? null : msg ~ "; ";
 
-    fail(header ~ "expected same: <" ~ expected.to!string ~ "> was not: <"~ actual.to!string ~ ">",
+    fail(header ~ format("expected same: <%s> was not: <%s>", expected, actual),
             file, line);
 }
 

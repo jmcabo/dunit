@@ -1,7 +1,7 @@
 #!/usr/bin/env rdmd -unittest -Isrc
 
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2013.
+//          Copyright Mario Kröplin 2014.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -11,6 +11,7 @@ module example;
 import dunit;
 import core.thread;
 import core.time;
+import std.range;
 import std.stdio;
 
 /**
@@ -30,21 +31,21 @@ class Test
     }
 
     @Test
-    public void assertArrayEqualsFailure()
-    {
-        int[] expected = [0, 1, 1, 2, 3];
-        int[] actual = [0, 1, 2, 3];
-
-        assertArrayEquals(expected, actual);
-    }
-
-    @Test
     public void assertAssocArrayEqualsFailure()
     {
         string[int] expected = [1: "foo", 2: "bar"];
         string[int] actual = [1: "foo", 2: "baz"];
 
         assertArrayEquals(expected, actual);
+    }
+
+    @Test
+    public void assertRangeEqualsFailure()
+    {
+        int[] expected = [0, 1, 1, 2];
+        auto actual = iota(0, 3);
+
+        assertRangeEquals(expected, actual);
     }
 
     @Test

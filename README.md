@@ -12,7 +12,7 @@ I found [jmcabo/dunit](https://github.com/jmcabo/dunit) promising.
 First, I had to fix some issues, but by now the original implementation
 has been largely revised.
 
-The xUnit Testing Framework is known to work with version D 2.064.2.
+The xUnit Testing Framework is known to work with version D 2.064.2 and D 2.065.0.
 
 Testing Functions vs. Interactions
 ----------------------------------
@@ -63,8 +63,8 @@ violated contracts and other exceptions from deep down the unit under test
 you may wish for the stack trace.
 
 That's why the xUnit Testing Framework distinguishes failures from errors,
-and why `dunit.assertion` doesn't use `AssertError` but introduces its own
-`AssertException`.
+and why [`dunit.assertion`](src/dunit/assertion.d) doesn't use `AssertError`
+but introduces its own `AssertException`.
 
 User Defined Attributes
 -----------------------
