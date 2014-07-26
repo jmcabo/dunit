@@ -19,7 +19,8 @@ Testing Functions vs. Interactions
 
 D's built-in support for unittests is best suited for testing functions,
 when the test cases can be expressed as one-liners.
-(Have a look at the documented unittests for the `dunit.assertion` functions.)
+(Have a look at the documented unittests for the
+[`dunit.assertion`](src/dunit/assertion.d) functions.)
 
 But you're on your own, when you have to write a lot more code per test case,
 for example for testing interactions of objects.
@@ -90,7 +91,7 @@ test reports, track failures and errors, and even provide trends over time.
 Examples
 --------
 
-Run the included example to see the xUnit Testing Framework in action:
+Run the included [example](example.d) to see the xUnit Testing Framework in action:
 
     ./example.d
 
@@ -98,7 +99,7 @@ Run the included example to see the xUnit Testing Framework in action:
 
 Have a look at the debug output of the example in "verbose" style:
 
-    rdmd -debug example.d --verbose
+    rdmd -debug -Isrc example.d --verbose
 
 Or just focus on the issues:
 
@@ -115,7 +116,8 @@ Related Projects
 - [DMocks-revived](https://github.com/QAston/DMocks-revived):
   a mock-object framework that allows to mock interfaces or classes
 - [specd](https://github.com/jostly/specd):
-  a unit testing framework inspired by [specs2](http://etorreborre.github.io/specs2/) and [ScalaTest](http://www.scalatest.org)
+  a unit testing framework inspired by [specs2](http://etorreborre.github.io/specs2/)
+  and [ScalaTest](http://www.scalatest.org)
 - [DUnit](https://github.com/kalekold/dunit):
   a toolkit of test assertions and a template mixin to enable mocking
 - [unit-threaded](https://github.com/atilaneves/unit-threaded):

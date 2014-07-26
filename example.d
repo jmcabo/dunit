@@ -1,4 +1,4 @@
-#!/usr/bin/env rdmd -unittest
+#!/usr/bin/env rdmd -unittest -Isrc
 
 //          Copyright Juan Manuel Cabo 2012.
 //          Copyright Mario Kröplin 2013.
