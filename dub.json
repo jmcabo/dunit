@@ -1,5 +1,5 @@
 {
-    "name": "dunit",
+    "name": "d-unit",
     "description": "xUnit Testing Framework for D",
     "copyright": "Copyright © 2013, Mario Kröplin",
     "authors": ["Juan Manuel Cabo", "Mario Kröplin"],
