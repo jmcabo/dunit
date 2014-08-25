@@ -697,8 +697,8 @@ mixin template UnitTest()
         static if (names.length == 0)
             immutable(string[]) _memberFunctions = [];
         else
-            static if (isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0]))
-                    && __traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
+            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
+                    && isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0]))
                     && _hasAttribute!(T, names[0], attribute))
                 immutable(string[]) _memberFunctions = [names[0]] ~ _memberFunctions!(T, attribute, names[1 .. $]);
             else
@@ -720,8 +720,8 @@ mixin template UnitTest()
         static if (names.length == 0)
             immutable(string[]) _annotations = [];
         else
-            static if (isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0]))
-                    && __traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()")))
+            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
+                    && isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0])))
             {
                 alias member = TypeTuple!(__traits(getMember, T, names[0]));
                 alias attributes = TypeTuple!(__traits(getAttributes, member));
