@@ -21,7 +21,7 @@ public import std.typetuple;
 struct TestClass
 {
     string[] tests;
-    string[string] ignoredTests;
+    Ignore[string] ignores;
 
     Object function() create;
     void function(Object o) beforeClass;
@@ -47,6 +47,17 @@ mixin template Main()
         return dunit_main(args);
     }
 }
+
+const string USAGE = `Usage: %s [options]
+Run the functions with @Test attribute of all classes that mix in UnitTest.
+
+Options:
+  -f, --filter REGEX    Select test functions matching the regular expression
+                        Multiple selections are processed in sequence
+  -h, --help            Display usage information, then exit
+  -l, --list            Display the test functions, then exit
+  --report FILE         Write JUnit-style XML test report
+  -v, --verbose         Display more information as the tests are run`;
 
 public int dunit_main(string[] args)
 {
@@ -77,16 +88,7 @@ public int dunit_main(string[] args)
 
     if (help)
     {
-        writefln("Usage: %s [options]", args.empty ? "testrunner" : baseName(args[0]));
-        writeln("Run the functions with @Test attribute of all classes that mix in UnitTest.");
-        writeln();
-        writeln("Options:");
-        writeln("  -f, --filter REGEX    Select test functions matching the regular expression");
-        writeln("                        Multiple selections are processed in sequence");
-        writeln("  -h, --help            Display usage information, then exit");
-        writeln("  -l, --list            Display the test functions, then exit");
-        writeln("  --report FILE         Write JUnit-style XML test report");
-        writeln("  -v, --verbose         Display more information as the tests are run");
+        writefln(USAGE, args.empty ? "testrunner" : baseName(args[0]));
         return 0;
     }
 
@@ -202,7 +204,7 @@ body
         foreach (testName; testNames)
         {
             bool success = true;
-            bool ignore = cast(bool)(testName in testClasses[className].ignoredTests);
+            bool ignore = cast(bool)(testName in testClasses[className].ignores);
 
             foreach (testListener; testListeners)
                 testListener.enterTest(testName);
@@ -227,7 +229,7 @@ body
 
             if (ignore || !classSetUp)
             {
-                string reason = testClasses[className].ignoredTests.get(testName, null);
+                string reason = testClasses[className].ignores.get(testName, Ignore.init).reason;
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
@@ -613,21 +615,10 @@ mixin template UnitTest()
 {
     private static this()
     {
-        import std.range;
-
-        alias allMembers = TypeTuple!(__traits(allMembers, typeof(this)));
-
         TestClass testClass;
-        string[] ignoredTests = _annotations!(typeof(this), Ignore, allMembers).dup;
 
-        testClass.tests = _memberFunctions!(typeof(this), Test, allMembers).dup;
-        foreach (chunk; chunks(ignoredTests, 2))
-        {
-            string testName = chunk[0];
-            string reason = chunk[1];
-
-            testClass.ignoredTests[testName] = reason;
-        }
+        testClass.tests = _members!(typeof(this), Test);
+        testClass.ignores = _attributes!(typeof(this), Ignore);
 
         static Object create()
         {
@@ -636,27 +627,27 @@ mixin template UnitTest()
 
         static void beforeClass(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), BeforeClass, allMembers)));
+            mixin(_sequence(_members!(typeof(this), BeforeClass)));
         }
 
         static void before(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), Before, allMembers)));
+            mixin(_sequence(_members!(typeof(this), Before)));
         }
 
         static void test(Object o, string name)
         {
-            mixin(_choice(_memberFunctions!(typeof(this), Test, allMembers)));
+            mixin(_choice(_members!(typeof(this), Test)));
         }
 
         static void after(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), After, allMembers)));
+            mixin(_sequence(_members!(typeof(this), After)));
         }
 
         static void afterClass(Object o)
         {
-            mixin(_sequence(_memberFunctions!(typeof(this), AfterClass, allMembers)));
+            mixin(_sequence(_members!(typeof(this), AfterClass)));
         }
 
         testClass.create = &create;
@@ -670,7 +661,7 @@ mixin template UnitTest()
         testClasses[this.classinfo.name] = testClass;
     }
 
-    private static string _choice(const string[] memberFunctions)
+    private static string _choice(in string[] memberFunctions)
     {
         string block = "auto testObject = cast(" ~ typeof(this).stringof ~ ") o;\n";
 
@@ -681,7 +672,7 @@ mixin template UnitTest()
         return block;
     }
 
-    private static string _sequence(const string[] memberFunctions)
+    private static string _sequence(in string[] memberFunctions)
     {
         string block = "auto testObject = cast(" ~ typeof(this).stringof ~ ") o;\n";
 
@@ -690,64 +681,94 @@ mixin template UnitTest()
         return block;
     }
 
-    private template _memberFunctions(alias T, attribute, names...)
+    template _members(T, Attribute)
     {
-        import std.traits;
-
-        static if (names.length == 0)
-            immutable(string[]) _memberFunctions = [];
-        else
-            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
-                    && isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0]))
-                    && _hasAttribute!(T, names[0], attribute))
-                immutable(string[]) _memberFunctions = [names[0]] ~ _memberFunctions!(T, attribute, names[1 .. $]);
-            else
-                immutable(string[]) _memberFunctions = _memberFunctions!(T, attribute, names[1 .. $]);
-    }
-
-    private template _hasAttribute(alias T, string name, attribute)
-    {
-        alias member = TypeTuple!(__traits(getMember, T, name));
-        alias attributes = TypeTuple!(__traits(getAttributes, member));
-
-        enum _hasAttribute = staticIndexOf!(attribute, attributes) != -1;
-    }
-
-    private template _annotations(alias T, attribute, names...)
-    {
-        import std.traits;
-
-        static if (names.length == 0)
-            immutable(string[]) _annotations = [];
-        else
-            static if (__traits(compiles, mixin("(new " ~ T.stringof ~ "())." ~ names[0] ~ "()"))
-                    && isSomeFunction!(mixin(T.stringof ~ '.' ~ names[0])))
+        static string[] helper()
+        {
+            string[] members;
+            
+            foreach (name; __traits(allMembers, T))
             {
-                alias member = TypeTuple!(__traits(getMember, T, names[0]));
-                alias attributes = TypeTuple!(__traits(getAttributes, member));
-                enum index = _indexOfValue!(attribute, attributes);
+                static if (__traits(compiles, __traits(getMember, T, name)))
+                {
+                    import std.typecons;
 
-                static if (index != -1)
-                    immutable(string[]) _annotations = [names[0], attributes[index].reason]
-                            ~ _annotations!(T, attribute, names[1 .. $]);
-                else
-                    immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
+                    alias member = TypeTuple!(__traits(getMember, T, name));
+                    
+                    static if (__traits(compiles, _hasAttribute!(member, Attribute)))
+                    {
+                        static if (_hasAttribute!(member, Attribute))
+                            members ~= name;
+                    }
+                }
             }
-            else
-                immutable(string[]) _annotations = _annotations!(T, attribute, names[1 .. $]);
+            return members;
+        }
+        
+        enum _members = helper;
     }
 
-    private template _indexOfValue(attribute, T...)
+    template _attributes(T, Attribute)
     {
-        static if (T.length == 0)
-            enum _indexOfValue = -1;
-        else
-            static if (is(typeof(T[0]) : attribute))
-                enum _indexOfValue = 0;
-            else
+        static Attribute[string] helper()
+        {
+            Attribute[string] attributes;
+            
+            foreach (name; __traits(allMembers, T))
             {
-                enum index = _indexOfValue!(attribute, T[1 .. $]);
-                enum _indexOfValue = (index == -1) ? -1 : index + 1;
+                static if (__traits(compiles, __traits(getMember, T, name)))
+                {
+                    import std.typecons;
+                    
+                    alias member = TypeTuple!(__traits(getMember, T, name));
+                    
+                    static if (__traits(compiles, _hasAttribute!(member, Attribute)))
+                    {
+                        static if (_hasAttribute!(member, Attribute))
+                            attributes[name] = _findAttribute!(member, Attribute);
+                    }
+                }
             }
+            return attributes;
+        }
+
+        enum _attributes = helper;
+    }
+
+    template _findAttribute(alias member, Attribute)
+    {
+        static auto helper()
+        {
+            static if (__traits(compiles, __traits(getAttributes, member)))
+            {
+                foreach (attribute; __traits(getAttributes, member))
+                {
+                    static if (is(attribute == Attribute))
+                        return Attribute.init;
+                    static if (is(typeof(attribute) == Attribute))
+                        return attribute;
+                }
+            }
+            assert(0);
+        }
+
+        enum _findAttribute = helper;
+    }
+
+    template _hasAttribute(alias member, Attribute)
+    {
+        static bool helper()
+        {
+            foreach (attribute; __traits(getAttributes, member))
+            {
+                static if (is(attribute == Attribute))
+                    return true;
+                static if (is(typeof(attribute) == Attribute))
+                    return true;
+            }
+            return false;
+        }
+        
+        enum bool _hasAttribute = helper;
     }
 }
