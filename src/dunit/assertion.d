@@ -447,7 +447,7 @@ unittest
  * Throws: AssertException when the probe fails to become true before timeout
  */
 public static void assertEventually(bool delegate() probe,
-        Duration timeout = msecs(500), Duration delay = msecs(10),
+        Duration timeout = 500.msecs, Duration delay = 10.msecs,
         lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
@@ -468,7 +468,7 @@ public static void assertEventually(bool delegate() probe,
 ///
 unittest
 {
-    assertEventually({ static count = 0; return ++count > 42; });
+    assertEventually({ static count = 0; return ++count > 23; });
 
     assertEquals("timed out",
             collectExceptionMsg!AssertException(assertEventually({ return false; })));
