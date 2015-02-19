@@ -1,6 +1,8 @@
 xUnit Testing Framework for D
 =============================
 
+[![Build Status](https://travis-ci.org/linkrope/dunit.svg?branch=master)](https://travis-ci.org/linkrope/dunit)
+
 This is a simple implementation of the xUnit Testing Framework
 for the [D Programming Language](http://dlang.org).
 Being based on [JUnit](http://junit.org) it allows to organize tests
