@@ -170,7 +170,7 @@ void assertArrayEquals(T, U, V)(T[V] expected, U[V] actual, lazy string msg = nu
                     file, line);
         }
 
-	import std.algorithm: sort;
+    import std.algorithm: sort;
     auto difference = setSymmetricDifference(expected.keys.sort(), actual.keys.sort());
 
     assertEmpty(difference,
