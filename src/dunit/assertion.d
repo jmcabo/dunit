@@ -142,7 +142,7 @@ unittest
  * Asserts that the arrays are equal.
  * Throws: AssertException otherwise
  */
-void assertArrayEquals(T, U)(T[] expected, U[] actual, lazy string msg = null,
+void assertArrayEquals(T, U)(in T[] expected, in U[] actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -155,7 +155,7 @@ void assertArrayEquals(T, U)(T[] expected, U[] actual, lazy string msg = null,
  * Asserts that the associative arrays are equal.
  * Throws: AssertException otherwise
  */
-void assertArrayEquals(T, U, V)(T[V] expected, U[V] actual, lazy string msg = null,
+void assertArrayEquals(T, U, V)(in T[V] expected, in U[V] actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
@@ -170,7 +170,6 @@ void assertArrayEquals(T, U, V)(T[V] expected, U[V] actual, lazy string msg = nu
                     file, line);
         }
 
-    import std.algorithm: sort;
     auto difference = setSymmetricDifference(expected.keys.sort(), actual.keys.sort());
 
     assertEmpty(difference,
