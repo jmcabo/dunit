@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2014.
+//          Copyright Mario Kröplin 2015.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -48,47 +48,37 @@ mixin template Main()
     }
 }
 
-const string USAGE = `Usage: %s [options]
-Run the functions with @Test attribute of all classes that mix in UnitTest.
-
-Options:
-  -f, --filter REGEX    Select test functions matching the regular expression
-                        Multiple selections are processed in sequence
-  -h, --help            Display usage information, then exit
-  -l, --list            Display the test functions, then exit
-  --report FILE         Write JUnit-style XML test report
-  -v, --verbose         Display more information as the tests are run`;
-
 public int dunit_main(string[] args)
 {
     import std.getopt;
     import std.path;
     import std.regex;
 
+    GetoptResult result;
     string[] filters = null;
-    bool help = false;
     bool list = false;
     string report = null;
     bool verbose = false;
 
     try
     {
-        getopt(args,
-                "filter|f", &filters,
-                "help|h", &help,
-                "list|l", &list,
-                "report", &report,
-                "verbose|v", &verbose);
+        result = getopt(args,
+                "filter|f", "Select test functions matching the regular expression", &filters,
+                "list|l", "Display the test functions, then exit", &list,
+                "report", "Write JUnit-style XML test report", &report,
+                "verbose|v", "Display more information as the tests are run", &verbose);
     }
-    catch (Exception exception)
+    catch (GetOptException exception)
     {
         stderr.writeln("error: ", exception.msg);
         return 1;
     }
 
-    if (help)
+    if (result.helpWanted)
     {
-        writefln(USAGE, args.empty ? "testrunner" : baseName(args[0]));
+        writefln("Usage: %s [options]", args.empty ? "testrunner" : baseName(args[0]));
+        writeln("Run the functions with @Test attribute of all classes that mix in UnitTest.");
+        defaultGetoptPrinter("Options:", result.options);
         return 0;
     }
 
@@ -115,12 +105,12 @@ public int dunit_main(string[] args)
 
                     if (match(fullyQualifiedName, filter))
                     {
-                        auto result = testSelections.find!"a.className == b"(className);
+                        auto foundTestSelections = testSelections.find!"a.className == b"(className);
 
-                        if (result.empty)
+                        if (foundTestSelections.empty)
                             testSelections ~= TestSelection(className, [testName]);
                         else
-                            result.front.testNames ~= testName;
+                            foundTestSelections.front.testNames ~= testName;
                     }
                 }
             }
