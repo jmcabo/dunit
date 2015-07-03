@@ -10,6 +10,7 @@ import dunit.assertion;
 import dunit.attributes;
 import dunit.color;
 
+import core.runtime;
 import core.time;
 import std.algorithm;
 import std.array;
@@ -40,6 +41,11 @@ struct TestSelection
     string[] testNames;
 }
 
+shared static this()
+{
+    Runtime.moduleUnitTester = () => true;
+}
+
 mixin template Main()
 {
     int main (string[] args)
@@ -68,7 +74,7 @@ public int dunit_main(string[] args)
                 "report", "Write JUnit-style XML test report", &report,
                 "verbose|v", "Display more information as the tests are run", &verbose);
     }
-    catch (GetOptException exception)
+    catch (Exception exception)
     {
         stderr.writeln("error: ", exception.msg);
         return 1;
@@ -131,8 +137,6 @@ public int dunit_main(string[] args)
         return 0;
     }
 
-    TestListener[] testListeners = null;
-
     if (verbose)
     {
         testListeners ~= new DetailReporter();
@@ -150,8 +154,57 @@ public int dunit_main(string[] args)
     auto reporter = new ResultReporter();
 
     testListeners ~= reporter;
+
+    if (filters is null)
+    {
+        Runtime.moduleUnitTester = &moduleUnitTester;
+
+        runModuleUnitTests;
+    }
+
     runTests(testSelections, testListeners);
     return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
+}
+
+private bool moduleUnitTester()
+{
+    foreach (moduleInfo; ModuleInfo)
+    {
+        if (moduleInfo)
+        {
+            auto unitTest = moduleInfo.unitTest;
+
+            if (unitTest)
+            {
+                bool success;
+
+                foreach (testListener; testListeners)
+                    testListener.enterClass(moduleInfo.name);
+                foreach (testListener; testListeners)
+                    testListener.enterTest("unittest");
+                try
+                {
+                    unitTest();
+                    success = true;
+                }
+                catch (AssertException exception)
+                {
+                    foreach (testListener; testListeners)
+                        testListener.addFailure(null, exception);
+                    success = false;
+                }
+                catch (Throwable throwable)
+                {
+                    foreach (testListener; testListeners)
+                        testListener.addError(null, throwable);
+                    success = false;
+                }
+                foreach (testListener; testListeners)
+                    testListener.exitTest(success);
+            }
+        }
+    }
+    return true;
 }
 
 public static void runTests(TestSelection[] testSelections, TestListener[] testListeners)
@@ -251,6 +304,8 @@ body
     foreach (testListener; testListeners)
         testListener.exit();
 }
+
+private __gshared TestListener[] testListeners = null;
 
 interface TestListener
 {
@@ -676,7 +731,7 @@ mixin template UnitTest()
         static string[] helper()
         {
             string[] members;
-            
+
             foreach (name; __traits(allMembers, T))
             {
                 static if (__traits(compiles, __traits(getMember, T, name)))
@@ -684,7 +739,7 @@ mixin template UnitTest()
                     import std.typecons;
 
                     alias member = TypeTuple!(__traits(getMember, T, name));
-                    
+
                     static if (__traits(compiles, _hasAttribute!(member, Attribute)))
                     {
                         static if (_hasAttribute!(member, Attribute))
@@ -694,7 +749,7 @@ mixin template UnitTest()
             }
             return members;
         }
-        
+
         enum _members = helper;
     }
 
@@ -703,15 +758,15 @@ mixin template UnitTest()
         static Attribute[string] helper()
         {
             Attribute[string] attributes;
-            
+
             foreach (name; __traits(allMembers, T))
             {
                 static if (__traits(compiles, __traits(getMember, T, name)))
                 {
                     import std.typecons;
-                    
+
                     alias member = TypeTuple!(__traits(getMember, T, name));
-                    
+
                     static if (__traits(compiles, _hasAttribute!(member, Attribute)))
                     {
                         static if (_hasAttribute!(member, Attribute))
@@ -758,7 +813,7 @@ mixin template UnitTest()
             }
             return false;
         }
-        
+
         enum bool _hasAttribute = helper;
     }
 }
