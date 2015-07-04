@@ -21,29 +21,24 @@ public import std.typetuple;
 
 struct TestClass
 {
+    string name;
     string[] tests;
     Ignore[string] ignores;
 
     Object function() create;
     void function(Object o) beforeClass;
     void function(Object o) before;
-    void function(Object o, string testName) test;
+    void delegate(Object o, string test) test;
     void function(Object o) after;
     void function(Object o) afterClass;
 }
 
-string[] testClassOrder;
-TestClass[string] testClasses;
+TestClass[] testClasses;
 
 struct TestSelection
 {
-    string className;
-    string[] testNames;
-}
-
-shared static this()
-{
-    Runtime.moduleUnitTester = () => true;
+    TestClass testClass;
+    string[] tests;
 }
 
 mixin template Main()
@@ -88,35 +83,33 @@ public int dunit_main(string[] args)
         return 0;
     }
 
+    testClasses = unitTestFunctions ~ testClasses;
+
     TestSelection[] testSelections = null;
 
     if (filters is null)
     {
-        foreach (className; testClassOrder)
-        {
-            string[] testNames = testClasses[className].tests;
-
-            testSelections ~= TestSelection(className, testNames);
-        }
+        foreach (testClass; testClasses)
+            testSelections ~= TestSelection(testClass, testClass.tests);
     }
     else
     {
         foreach (filter; filters)
         {
-            foreach (className; testClassOrder)
+            foreach (testClass; testClasses)
             {
-                foreach (testName; testClasses[className].tests)
+                foreach (test; testClass.tests)
                 {
-                    string fullyQualifiedName = className ~ '.' ~ testName;
+                    string fullyQualifiedName = testClass.name ~ '.' ~ test;
 
                     if (match(fullyQualifiedName, filter))
                     {
-                        auto foundTestSelections = testSelections.find!"a.className == b"(className);
+                        auto foundTestSelections = testSelections.find!"a.testClass.name == b"(testClass.name);
 
                         if (foundTestSelections.empty)
-                            testSelections ~= TestSelection(className, [testName]);
+                            testSelections ~= TestSelection(testClass, [test]);
                         else
-                            foundTestSelections.front.testNames ~= testName;
+                            foundTestSelections.front.tests ~= test;
                     }
                 }
             }
@@ -127,9 +120,9 @@ public int dunit_main(string[] args)
     {
         foreach (testSelection; testSelections) with (testSelection)
         {
-            foreach (testName; testNames)
+            foreach (test; tests)
             {
-                string fullyQualifiedName = className ~ '.' ~ testName;
+                string fullyQualifiedName = testClass.name ~ '.' ~ test;
 
                 writeln(fullyQualifiedName);
             }
@@ -154,57 +147,8 @@ public int dunit_main(string[] args)
     auto reporter = new ResultReporter();
 
     testListeners ~= reporter;
-
-    if (filters is null)
-    {
-        Runtime.moduleUnitTester = &moduleUnitTester;
-
-        runModuleUnitTests;
-    }
-
     runTests(testSelections, testListeners);
     return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
-}
-
-private bool moduleUnitTester()
-{
-    foreach (moduleInfo; ModuleInfo)
-    {
-        if (moduleInfo)
-        {
-            auto unitTest = moduleInfo.unitTest;
-
-            if (unitTest)
-            {
-                bool success;
-
-                foreach (testListener; testListeners)
-                    testListener.enterClass(moduleInfo.name);
-                foreach (testListener; testListeners)
-                    testListener.enterTest("unittest");
-                try
-                {
-                    unitTest();
-                    success = true;
-                }
-                catch (AssertException exception)
-                {
-                    foreach (testListener; testListeners)
-                        testListener.addFailure(null, exception);
-                    success = false;
-                }
-                catch (Throwable throwable)
-                {
-                    foreach (testListener; testListeners)
-                        testListener.addError(null, throwable);
-                    success = false;
-                }
-                foreach (testListener; testListeners)
-                    testListener.exitTest(success);
-            }
-        }
-    }
-    return true;
 }
 
 public static void runTests(TestSelection[] testSelections, TestListener[] testListeners)
@@ -238,19 +182,19 @@ body
     foreach (testSelection; testSelections) with (testSelection)
     {
         foreach (testListener; testListeners)
-            testListener.enterClass(className);
+            testListener.enterClass(testClass.name);
 
         Object testObject = null;
         bool classSetUp = true;  // not yet failed
 
         // run each @Test of the class
-        foreach (testName; testNames)
+        foreach (test; tests)
         {
             bool success = true;
-            bool ignore = cast(bool)(testName in testClasses[className].ignores);
+            bool ignore = cast(bool)(test in testClass.ignores);
 
             foreach (testListener; testListeners)
-                testListener.enterTest(testName);
+                testListener.enterTest(test);
             scope (exit)
                 foreach (testListener; testListeners)
                     testListener.exitTest(success);
@@ -261,18 +205,18 @@ body
                 if (classSetUp)
                 {
                     classSetUp = tryRun("this",
-                            { testObject = testClasses[className].create(); });
+                            { testObject = testClass.create(); });
                 }
                 if (classSetUp)
                 {
                     classSetUp = tryRun("@BeforeClass",
-                            { testClasses[className].beforeClass(testObject); });
+                            { testClass.beforeClass(testObject); });
                 }
             }
 
             if (ignore || !classSetUp)
             {
-                string reason = testClasses[className].ignores.get(testName, Ignore.init).reason;
+                string reason = testClass.ignores.get(test, Ignore.init).reason;
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
@@ -281,15 +225,15 @@ body
             }
 
             success = tryRun("@Before",
-                    { testClasses[className].before(testObject); });
+                    { testClass.before(testObject); });
 
             if (success)
             {
                 success = tryRun("@Test",
-                        { testClasses[className].test(testObject, testName); });
+                        { testClass.test(testObject, test); });
                 // run @After even if @Test failed
                 success = tryRun("@After",
-                        { testClasses[className].after(testObject); })
+                        { testClass.after(testObject); })
                         && success;
             }
         }
@@ -297,7 +241,7 @@ body
         if (testObject !is null && classSetUp)
         {
             tryRun("@AfterClass",
-                    { testClasses[className].afterClass(testObject); });
+                    { testClass.afterClass(testObject); });
         }
     }
 
@@ -310,16 +254,16 @@ private __gshared TestListener[] testListeners = null;
 interface TestListener
 {
     public void enterClass(string className);
-    public void enterTest(string testName);
+    public void enterTest(string test);
     public void skip(string reason);
     public void addFailure(string phase, AssertException exception);
     public void addError(string phase, Throwable throwable);
     public void exitTest(bool success);
     public void exit();
 
-    public static string prettyOrigin(string className, string testName, string phase)
+    public static string prettyOrigin(string className, string test, string phase)
     {
-        string origin = prettyOrigin(testName, phase);
+        string origin = prettyOrigin(test, phase);
 
         if (origin.startsWith('@'))
             return className ~ origin;
@@ -327,18 +271,18 @@ interface TestListener
             return className ~ '.' ~ origin;
     }
 
-    public static string prettyOrigin(string testName, string phase)
+    public static string prettyOrigin(string test, string phase)
     {
         switch (phase)
         {
             case "@Test":
-                return testName;
+                return test;
             case "this":
             case "@BeforeClass":
             case "@AfterClass":
                 return phase;
             default:
-                return testName ~ phase;
+                return test ~ phase;
         }
     }
 
@@ -359,7 +303,7 @@ class IssueReporter : TestListener
     private struct Issue
     {
         string testClass;
-        string testName;
+        string test;
         string phase;
         Throwable throwable;
     }
@@ -367,16 +311,16 @@ class IssueReporter : TestListener
     private Issue[] failures = null;
     private Issue[] errors = null;
     private string className;
-    private string testName;
+    private string test;
 
     public void enterClass(string className)
     {
         this.className = className;
     }
 
-    public void enterTest(string testName)
+    public void enterTest(string test)
     {
-        this.testName = testName;
+        this.test = test;
     }
 
     public void skip(string reason)
@@ -386,13 +330,13 @@ class IssueReporter : TestListener
 
     public void addFailure(string phase, AssertException exception)
     {
-        this.failures ~= Issue(this.className, this.testName, phase, exception);
+        this.failures ~= Issue(this.className, this.test, phase, exception);
         writec(Color.onRed, "F");
     }
 
     public void addError(string phase, Throwable throwable)
     {
-        this.errors ~= Issue(this.className, this.testName, phase, throwable);
+        this.errors ~= Issue(this.className, this.test, phase, throwable);
         writec(Color.onRed, "E");
     }
 
@@ -418,7 +362,7 @@ class IssueReporter : TestListener
             foreach (i, issue; this.errors)
             {
                 writefln("%d) %s", i + 1,
-                        prettyOrigin(issue.testClass, issue.testName, issue.phase));
+                        prettyOrigin(issue.testClass, issue.test, issue.phase));
                 writeln(issue.throwable.toString);
                 writeln("----------------");
             }
@@ -438,7 +382,7 @@ class IssueReporter : TestListener
                 Throwable throwable = issue.throwable;
 
                 writefln("%d) %s", i + 1,
-                        prettyOrigin(issue.testClass, issue.testName, issue.phase));
+                        prettyOrigin(issue.testClass, issue.test, issue.phase));
                 writefln("%s: %s", description(throwable), throwable.msg);
             }
         }
@@ -447,7 +391,7 @@ class IssueReporter : TestListener
 
 class DetailReporter : TestListener
 {
-    private string testName;
+    private string test;
     private TickDuration startTime;
 
     public void enterClass(string className)
@@ -455,16 +399,16 @@ class DetailReporter : TestListener
         writeln(className);
     }
 
-    public void enterTest(string testName)
+    public void enterTest(string test)
     {
-        this.testName = testName;
+        this.test = test;
         this.startTime = TickDuration.currSystemTick();
     }
 
     public void skip(string reason)
     {
         writec(Color.yellow, "    SKIP: ");
-        writeln(this.testName);
+        writeln(this.test);
         if (!reason.empty)
             writeln(indent(`"%s"`.format(reason)));
     }
@@ -472,14 +416,14 @@ class DetailReporter : TestListener
     public void addFailure(string phase, AssertException exception)
     {
         writec(Color.red, "    FAILURE: ");
-        writeln(prettyOrigin(this.testName, phase));
+        writeln(prettyOrigin(this.test, phase));
         writeln(indent("%s: %s".format(description(exception), exception.msg)));
     }
 
     public void addError(string phase, Throwable throwable)
     {
         writec(Color.red, "    ERROR: ");
-        writeln(prettyOrigin(this.testName, phase));
+        writeln(prettyOrigin(this.test, phase));
         writeln("        ", throwable.toString);
         writeln("----------------");
     }
@@ -491,7 +435,7 @@ class DetailReporter : TestListener
             double elapsed = (TickDuration.currSystemTick() - this.startTime).usecs() / 1_000.0;
 
             writec(Color.green, "    OK: ");
-            writefln("%6.2f ms  %s", elapsed, this.testName);
+            writefln("%6.2f ms  %s", elapsed, this.test);
         }
     }
 
@@ -518,7 +462,7 @@ class ResultReporter : TestListener
         // do nothing
     }
 
-    public void enterTest(string testName)
+    public void enterTest(string test)
     {
         ++this.tests;
     }
@@ -587,11 +531,11 @@ class XmlReporter : TestListener
         this.className = className;
     }
 
-    public void enterTest(string testName)
+    public void enterTest(string test)
     {
         this.testCase = new Element("testcase");
         this.testCase.tag.attr["classname"] = this.className;
-        this.testCase.tag.attr["name"] = testName;
+        this.testCase.tag.attr["name"] = test;
         this.testSuite ~= this.testCase;
         this.startTime = TickDuration.currSystemTick();
     }
@@ -653,6 +597,40 @@ class XmlReporter : TestListener
     }
 }
 
+shared static this()
+{
+    Runtime.moduleUnitTester = () => true;
+}
+
+private TestClass[] unitTestFunctions()
+{
+    TestClass[] testClasses = null;
+    TestClass testClass;
+
+    testClass.tests = ["unittest"];
+    testClass.create = () => null;
+    testClass.beforeClass = (o) {};
+    testClass.before = (o) {};
+    testClass.after = (o) {};
+    testClass.afterClass = (o) {};
+
+    foreach (moduleInfo; ModuleInfo)
+    {
+        if (moduleInfo)
+        {
+            auto unitTest = moduleInfo.unitTest;
+
+            if (unitTest)
+            {
+                testClass.name = moduleInfo.name;
+                testClass.test = (o, test) { unitTest(); };
+                testClasses ~= testClass;
+            }
+        }
+    }
+    return testClasses;
+}
+
 /**
  * Registers a class as a unit test.
  */
@@ -662,6 +640,7 @@ mixin template UnitTest()
     {
         TestClass testClass;
 
+        testClass.name = this.classinfo.name;
         testClass.tests = _members!(typeof(this), Test);
         testClass.ignores = _attributes!(typeof(this), Ignore);
 
@@ -680,7 +659,7 @@ mixin template UnitTest()
             mixin(_sequence(_members!(typeof(this), Before)));
         }
 
-        static void test(Object o, string name)
+        void test(Object o, string name)
         {
             mixin(_choice(_members!(typeof(this), Test)));
         }
@@ -702,8 +681,7 @@ mixin template UnitTest()
         testClass.after = &after;
         testClass.afterClass = &afterClass;
 
-        testClassOrder ~= this.classinfo.name;
-        testClasses[this.classinfo.name] = testClass;
+        testClasses ~= testClass;
     }
 
     private static string _choice(in string[] memberFunctions)
