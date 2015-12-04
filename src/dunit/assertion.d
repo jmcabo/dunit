@@ -103,13 +103,41 @@ unittest
 }
 
 /**
- * Asserts that the string values are equal.
+ * Asserts that the floating-point values are approximately equal.
  * Throws: AssertException otherwise
  */
 void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
-    if (!isSomeString!T)
+    if (isFloatingPoint!T || isFloatingPoint!U)
+{
+    import std.math : approxEqual;
+
+    if (approxEqual(expected, actual))
+        return;
+
+    string header = (msg.empty) ? null : msg ~ "; ";
+
+    fail(header ~ format("expected: <%s> but was: <%s>", expected, actual),
+            file, line);
+}
+
+///
+unittest
+{
+    assertEquals(1, 1.01);
+    assertEquals("expected: <1> but was: <1.1>",
+            collectExceptionMsg!AssertException(assertEquals(1, 1.1)));
+}
+
+/**
+ * Asserts that the values are equal.
+ * Throws: AssertException otherwise
+ */
+void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
+        string file = __FILE__,
+        size_t line = __LINE__)
+    if (!isSomeString!T && !isFloatingPoint!T && !isFloatingPoint!U)
 {
     if (expected == actual)
         return;
@@ -126,8 +154,6 @@ unittest
     assertEquals(42, 42);
     assertEquals("expected: <42> but was: <24>",
             collectExceptionMsg!AssertException(assertEquals(42, 24)));
-
-    assertEquals(42.0, 42.0);
 
     Object foo = new Object();
     Object bar = null;
