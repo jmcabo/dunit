@@ -184,7 +184,7 @@ class TestingAsynchronousCode
 
     private void threadFunction()
     {
-        Thread.sleep(msecs(100));
+        Thread.sleep(100.msecs);
         done = true;
     }
 

@@ -60,14 +60,17 @@ public int dunit_main(string[] args)
     bool list = false;
     string report = null;
     bool verbose = false;
+    bool xml = false;
 
     try
     {
         result = getopt(args,
-                "filter|f", "Select test functions matching the regular expression", &filters,
                 "list|l", "Display the test functions, then exit", &list,
+                "filter|f", "Select test functions matching the regular expression", &filters,
+                "verbose|v", "Display more information as the tests are run", &verbose,
+                "xml", "Display progressive XML output", &xml,
                 "report", "Write JUnit-style XML test report", &report,
-                "verbose|v", "Display more information as the tests are run", &verbose);
+                );
     }
     catch (Exception exception)
     {
@@ -130,24 +133,27 @@ public int dunit_main(string[] args)
         return 0;
     }
 
-    if (verbose)
+    if (xml)
     {
-        testListeners ~= new DetailReporter();
+        testListeners ~= new XmlReporter();
     }
     else
     {
-        testListeners ~= new IssueReporter();
+        if (verbose)
+            testListeners ~= new DetailReporter();
+        else
+            testListeners ~= new IssueReporter();
     }
 
     if (!report.empty)
-    {
-        testListeners ~= new XmlReporter(report);
-    }
+        testListeners ~= new ReportReporter(report);
 
     auto reporter = new ResultReporter();
 
     testListeners ~= reporter;
     runTests(testSelections, testListeners);
+    if (!xml)
+        reporter.write();
     return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
 }
 
@@ -489,6 +495,11 @@ class ResultReporter : TestListener
 
     public void exit()
     {
+        // do nothing
+    }
+
+    public void write()
+    {
         writeln();
         writefln("Tests run: %d, Failures: %d, Errors: %d, Skips: %d",
                 this.tests, this.failures, this.errors, this.skips);
@@ -507,6 +518,72 @@ class ResultReporter : TestListener
 }
 
 class XmlReporter : TestListener
+{
+    import std.xml;
+
+    private Document testCase;
+    private string className;
+    private TickDuration startTime;
+
+    public void enterClass(string className)
+    {
+        this.className = className;
+    }
+
+    public void enterTest(string test)
+    {
+        this.testCase = new Document(new Tag("testcase"));
+        this.testCase.tag.attr["classname"] = this.className;
+        this.testCase.tag.attr["name"] = test;
+        this.startTime = TickDuration.currSystemTick();
+    }
+
+    public void skip(string reason)
+    {
+        auto element = new Element("skipped");
+
+        element.tag.attr["message"] = reason;
+        this.testCase ~= element;
+    }
+
+    public void addFailure(string phase, AssertException exception)
+    {
+        auto element = new Element("failure");
+        string message = "%s %s: %s".format(phase,
+                description(exception), exception.msg);
+
+        element.tag.attr["message"] = message;
+        this.testCase ~= element;
+    }
+
+    public void addError(string phase, Throwable throwable)
+    {
+        auto element = new Element("error", throwable.info.toString);
+        string message = "%s %s: %s".format(phase,
+                description(throwable), throwable.msg);
+
+        element.tag.attr["message"] = message;
+        this.testCase ~= element;
+    }
+
+    public void exitTest(bool success)
+    {
+        double elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
+
+        this.testCase.tag.attr["time"] = "%.3f".format(elapsed);
+
+        string report = join(this.testCase.pretty(4), "\n");
+
+        writeln(report);
+    }
+
+    public void exit()
+    {
+        // do nothing
+    }
+}
+
+class ReportReporter : TestListener
 {
     import std.xml;
 
