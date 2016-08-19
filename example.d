@@ -1,7 +1,11 @@
-#!/usr/bin/env rdmd -unittest -Isrc
+#!/usr/bin/env dub
+/+ dub.sdl:
+name "example"
+dependency "d-unit" version=">=0.7.2"
++/
 
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2014.
+//          Copyright Mario Kröplin 2016.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -49,9 +53,12 @@ class Test
     }
 
     @Test
-    public void assertOpFailure()
+    public void assertAllFailure()
     {
-        assertLessThan(6 * 7, 42);
+        assertAll(
+            assertLessThan(6 * 7, 42),
+            assertGreaterThan(6 * 7, 42),
+        );
     }
 }
 
@@ -70,25 +77,25 @@ class TestFixture
         debug writeln("@this()");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass()
     {
         debug writeln("@BeforeClass");
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass()
     {
         debug writeln("@AfterClass");
     }
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         debug writeln("@Before");
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         debug writeln("@After");
@@ -114,7 +121,7 @@ class TestReuse : TestFixture
 {
     mixin UnitTest;
 
-    @Before
+    @BeforeEach
     public override void setUp()
     {
         debug writeln("@Before override");
@@ -144,7 +151,7 @@ class TestingThisAndThat
 
     // disabled test function
     @Test
-    @Ignore("not ready yet")
+    @Disabled("not ready yet")
     public void failure()
     {
         testResult(false);
@@ -156,6 +163,17 @@ class TestingThisAndThat
     {
         assert(false);
     }
+
+	// expected exception can be further verified
+	@Test
+	public void testException()
+	{
+	    import std.exception : enforce;
+
+		auto exception = expectThrows(enforce(false));
+
+		assertEquals("Enforcement failed", exception.msg);
+	}
 }
 
 /**
@@ -169,14 +187,14 @@ class TestingAsynchronousCode
 
     private bool done;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
         done = false;
         thread = new Thread(&threadFunction);
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
         thread.join();

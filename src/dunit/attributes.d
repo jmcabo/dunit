@@ -1,12 +1,18 @@
 module dunit.attributes;
 
-enum After;
-enum AfterClass;
-enum Before;
-enum BeforeClass;
+enum AfterEach;
+enum AfterAll;
+enum BeforeEach;
+enum BeforeAll;
 enum Test;
 
-struct Ignore
+struct Disabled
 {
     string reason;
 }
+
+deprecated("use AfterEach instead") alias After = AfterEach;
+deprecated("use AfterAll instead") alias AfterClass = AfterAll;
+deprecated("use BeforeEach instead") alias Before = BeforeEach;
+deprecated("use BeforeAll instead") alias BeforeClass = BeforeAll;
+deprecated("use Disabled instead") alias Ignore = Disabled;

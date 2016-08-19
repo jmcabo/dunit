@@ -73,8 +73,8 @@ Thanks to D's User Defined Attributes, test names no longer have to start with
 "test".
 
 Put `mixin UnitTest;` in your test class and attach `@Test`,
-`@Before`, `@After`, `@BeforeClass`, `@AfterClass`, and `@Ignore("...")`
-(borrowed from JUnit 4) to the member functions to state their purpose.
+`@BeforeEach`, `@AfterEach`, `@BeforeAll`, `@AfterAll`, and `@Disabled("...")`
+(borrowed from JUnit 5) to the member functions to state their purpose.
 
 Test Results
 ------------
@@ -109,6 +109,20 @@ Alternatively, build and run the example using
 [dub](https://github.com/rejectedsoftware/dub):
 
     dub --build=plain --config=example -- --verbose
+
+"Next Generation"
+-----------------
+
+JUnit's `assertEquals(expected, actual)` got changed into
+TestNG's `assertEquals(actual, expected)`, which feels more natural.
+Moreover, the reversed order of arguments is more convenient for
+D's Uniform Function Call Syntax: `answer.assertEquals(42)`.
+The only effect, however, is on the failure messages,
+which will be confusing if the order is mixed up.
+
+So, if you prefer TestNG's order of arguments,
+import `dunit.ng` or `dunit.ng.assertion`
+instead of the conventional `dunit` and `dunit.assertion`.
 
 Related Projects
 ----------------

@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2015.
+//          Copyright Mario Kröplin 2016.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -23,14 +23,14 @@ struct TestClass
 {
     string name;
     string[] tests;
-    Ignore[string] ignores;
+    Disabled[string] disabled;
 
     Object function() create;
-    void function(Object o) beforeClass;
-    void function(Object o) before;
+    void function(Object o) beforeAll;
+    void function(Object o) beforeEach;
     void delegate(Object o, string test) test;
-    void function(Object o) after;
-    void function(Object o) afterClass;
+    void function(Object o) afterEach;
+    void function(Object o) afterAll;
 }
 
 TestClass[] testClasses;
@@ -190,6 +190,7 @@ body
         foreach (testListener; testListeners)
             testListener.enterClass(testClass.name);
 
+        // TODO testObject per test; static BeforeAll and AfterAll
         Object testObject = null;
         bool classSetUp = true;  // not yet failed
 
@@ -197,7 +198,7 @@ body
         foreach (test; tests)
         {
             bool success = true;
-            bool ignore = cast(bool)(test in testClass.ignores);
+            bool ignore = cast(bool)(test in testClass.disabled);
 
             foreach (testListener; testListeners)
                 testListener.enterTest(test);
@@ -215,14 +216,14 @@ body
                 }
                 if (classSetUp)
                 {
-                    classSetUp = tryRun("@BeforeClass",
-                            { testClass.beforeClass(testObject); });
+                    classSetUp = tryRun("@BeforeAll",
+                            { testClass.beforeAll(testObject); });
                 }
             }
 
             if (ignore || !classSetUp)
             {
-                string reason = testClass.ignores.get(test, Ignore.init).reason;
+                string reason = testClass.disabled.get(test, Disabled.init).reason;
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
@@ -230,24 +231,24 @@ body
                 continue;
             }
 
-            success = tryRun("@Before",
-                    { testClass.before(testObject); });
+            success = tryRun("@BeforeEach",
+                    { testClass.beforeEach(testObject); });
 
             if (success)
             {
                 success = tryRun("@Test",
                         { testClass.test(testObject, test); });
-                // run @After even if @Test failed
-                success = tryRun("@After",
-                        { testClass.after(testObject); })
+                // run @AfterEach even if @Test failed
+                success = tryRun("@AfterEach",
+                        { testClass.afterEach(testObject); })
                         && success;
             }
         }
 
         if (testObject !is null && classSetUp)
         {
-            tryRun("@AfterClass",
-                    { testClass.afterClass(testObject); });
+            tryRun("@AfterAll",
+                    { testClass.afterAll(testObject); });
         }
     }
 
@@ -284,22 +285,11 @@ interface TestListener
             case "@Test":
                 return test;
             case "this":
-            case "@BeforeClass":
-            case "@AfterClass":
+            case "@BeforeAll":
+            case "@AfterAll":
                 return phase;
             default:
                 return test ~ phase;
-        }
-    }
-
-    public static string description(Throwable throwable)
-    {
-        with (throwable)
-        {
-            if (file.empty)
-                return typeid(throwable).name;
-            else
-                return "%s@%s(%d)".format(typeid(throwable).name, file, line);
         }
     }
 }
@@ -389,7 +379,7 @@ class IssueReporter : TestListener
 
                 writefln("%d) %s", i + 1,
                         prettyOrigin(issue.testClass, issue.test, issue.phase));
-                writefln("%s: %s", description(throwable), throwable.msg);
+                writefln(throwable.description);
             }
         }
     }
@@ -416,14 +406,14 @@ class DetailReporter : TestListener
         writec(Color.yellow, "    SKIP: ");
         writeln(this.test);
         if (!reason.empty)
-            writeln(indent(`"%s"`.format(reason)));
+            writeln(indent(format(`"%s"`, reason)));
     }
 
     public void addFailure(string phase, AssertException exception)
     {
         writec(Color.red, "    FAILURE: ");
         writeln(prettyOrigin(this.test, phase));
-        writeln(indent("%s: %s".format(description(exception), exception.msg)));
+        writeln(indent(exception.description));
     }
 
     public void addError(string phase, Throwable throwable)
@@ -549,8 +539,7 @@ class XmlReporter : TestListener
     public void addFailure(string phase, AssertException exception)
     {
         auto element = new Element("failure");
-        string message = "%s %s: %s".format(phase,
-                description(exception), exception.msg);
+        string message = format("%s %s", phase, exception.description);
 
         element.tag.attr["message"] = message;
         this.testCase ~= element;
@@ -559,8 +548,7 @@ class XmlReporter : TestListener
     public void addError(string phase, Throwable throwable)
     {
         auto element = new Element("error", throwable.info.toString);
-        string message = "%s %s: %s".format(phase,
-                description(throwable), throwable.msg);
+        string message = format("%s %s", phase, throwable.description);
 
         element.tag.attr["message"] = message;
         this.testCase ~= element;
@@ -570,7 +558,7 @@ class XmlReporter : TestListener
     {
         double elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
-        this.testCase.tag.attr["time"] = "%.3f".format(elapsed);
+        this.testCase.tag.attr["time"] = format("%.3f", elapsed);
 
         string report = join(this.testCase.pretty(4), "\n");
 
@@ -635,8 +623,7 @@ class ReportReporter : TestListener
         if (this.testCase.elements.empty)
         {
             auto element = new Element("failure");
-            string message = "%s %s: %s".format(phase,
-                    description(exception), exception.msg);
+            string message = format("%s %s", phase, exception.description);
 
             element.tag.attr["message"] = message;
             this.testCase ~= element;
@@ -649,8 +636,7 @@ class ReportReporter : TestListener
         if (this.testCase.elements.empty)
         {
             auto element = new Element("error", throwable.info.toString);
-            string message = "%s %s: %s".format(phase,
-                    description(throwable), throwable.msg);
+            string message = format("%s %s", phase, throwable.description);
 
             element.tag.attr["message"] = message;
             this.testCase ~= element;
@@ -661,7 +647,7 @@ class ReportReporter : TestListener
     {
         double elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
-        this.testCase.tag.attr["time"] = "%.3f".format(elapsed);
+        this.testCase.tag.attr["time"] = format("%.3f", elapsed);
     }
 
     public void exit()
@@ -686,10 +672,10 @@ private TestClass[] unitTestFunctions()
 
     testClass.tests = ["unittest"];
     testClass.create = () => null;
-    testClass.beforeClass = (o) {};
-    testClass.before = (o) {};
-    testClass.after = (o) {};
-    testClass.afterClass = (o) {};
+    testClass.beforeAll = (o) {};
+    testClass.beforeEach = (o) {};
+    testClass.afterEach = (o) {};
+    testClass.afterAll = (o) {};
 
     foreach (moduleInfo; ModuleInfo)
     {
@@ -719,21 +705,21 @@ mixin template UnitTest()
 
         testClass.name = this.classinfo.name;
         testClass.tests = _members!(typeof(this), Test);
-        testClass.ignores = _attributes!(typeof(this), Ignore);
+        testClass.disabled = _attributes!(typeof(this), Disabled);
 
         static Object create()
         {
             mixin("return new " ~ typeof(this).stringof ~ "();");
         }
 
-        static void beforeClass(Object o)
+        static void beforeAll(Object o)
         {
-            mixin(_sequence(_members!(typeof(this), BeforeClass)));
+            mixin(_sequence(_members!(typeof(this), BeforeAll)));
         }
 
-        static void before(Object o)
+        static void beforeEach(Object o)
         {
-            mixin(_sequence(_members!(typeof(this), Before)));
+            mixin(_sequence(_members!(typeof(this), BeforeEach)));
         }
 
         void test(Object o, string name)
@@ -741,22 +727,22 @@ mixin template UnitTest()
             mixin(_choice(_members!(typeof(this), Test)));
         }
 
-        static void after(Object o)
+        static void afterEach(Object o)
         {
-            mixin(_sequence(_members!(typeof(this), After)));
+            mixin(_sequence(_members!(typeof(this), AfterEach)));
         }
 
-        static void afterClass(Object o)
+        static void afterAll(Object o)
         {
-            mixin(_sequence(_members!(typeof(this), AfterClass)));
+            mixin(_sequence(_members!(typeof(this), AfterAll)));
         }
 
         testClass.create = &create;
-        testClass.beforeClass = &beforeClass;
-        testClass.before = &before;
+        testClass.beforeAll = &beforeAll;
+        testClass.beforeEach = &beforeEach;
         testClass.test = &test;
-        testClass.after = &after;
-        testClass.afterClass = &afterClass;
+        testClass.afterEach = &afterEach;
+        testClass.afterAll = &afterAll;
 
         testClasses ~= testClass;
     }
