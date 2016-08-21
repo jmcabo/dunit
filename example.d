@@ -78,27 +78,27 @@ class TestFixture
     }
 
     @BeforeAll
-    public static void setUpClass()
+    public static void setUpAll()
     {
-        debug writeln("@BeforeClass");
+        debug writeln("@BeforeAll");
     }
 
     @AfterAll
-    public static void tearDownClass()
+    public static void tearDownAll()
     {
-        debug writeln("@AfterClass");
+        debug writeln("@AfterAll");
     }
 
     @BeforeEach
     public void setUp()
     {
-        debug writeln("@Before");
+        debug writeln("@BeforeEach");
     }
 
     @AfterEach
     public void tearDown()
     {
-        debug writeln("@After");
+        debug writeln("@AfterEach");
     }
 
     @Test
@@ -124,7 +124,7 @@ class TestReuse : TestFixture
     @BeforeEach
     public override void setUp()
     {
-        debug writeln("@Before override");
+        debug writeln("@BeforeEach override");
     }
 }
 
@@ -164,16 +164,16 @@ class TestingThisAndThat
         assert(false);
     }
 
-	// expected exception can be further verified
-	@Test
-	public void testException()
-	{
-	    import std.exception : enforce;
+    // expected exception can be further verified
+    @Test
+    public void testException()
+    {
+        import std.exception : enforce;
 
-		auto exception = expectThrows(enforce(false));
+        auto exception = expectThrows(enforce(false));
 
-		assertEquals("Enforcement failed", exception.msg);
-	}
+        assertEquals("Enforcement failed", exception.msg);
+    }
 }
 
 /**

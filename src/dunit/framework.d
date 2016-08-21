@@ -26,11 +26,11 @@ struct TestClass
     Disabled[string] disabled;
 
     Object function() create;
-    void function(Object o) beforeAll;
+    void function() beforeAll;
     void function(Object o) beforeEach;
     void delegate(Object o, string test) test;
     void function(Object o) afterEach;
-    void function(Object o) afterAll;
+    void function() afterAll;
 }
 
 TestClass[] testClasses;
@@ -190,15 +190,13 @@ body
         foreach (testListener; testListeners)
             testListener.enterClass(testClass.name);
 
-        // TODO testObject per test; static BeforeAll and AfterAll
-        Object testObject = null;
-        bool classSetUp = true;  // not yet failed
+        bool initialized = false;
+        bool setUp = false;
 
         // run each @Test of the class
         foreach (test; tests)
         {
-            bool success = true;
-            bool ignore = cast(bool)(test in testClass.disabled);
+            bool success = false;
 
             foreach (testListener; testListeners)
                 testListener.enterTest(test);
@@ -206,34 +204,36 @@ body
                 foreach (testListener; testListeners)
                     testListener.exitTest(success);
 
-            // create test object on demand
-            if (!ignore && testObject is null)
-            {
-                if (classSetUp)
-                {
-                    classSetUp = tryRun("this",
-                            { testObject = testClass.create(); });
-                }
-                if (classSetUp)
-                {
-                    classSetUp = tryRun("@BeforeAll",
-                            { testClass.beforeAll(testObject); });
-                }
-            }
-
-            if (ignore || !classSetUp)
+            if (test in testClass.disabled || (initialized && !setUp))
             {
                 string reason = testClass.disabled.get(test, Disabled.init).reason;
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
-                success = false;
                 continue;
             }
 
-            success = tryRun("@BeforeEach",
-                    { testClass.beforeEach(testObject); });
+            // use lazy initialization to run @BeforeAll
+            // (failure or error can only be reported for a given test)
+            if (!initialized)
+            {
+                setUp = tryRun("@BeforeAll",
+                        { testClass.beforeAll(); });
+                initialized = true;
+            }
 
+            Object testObject = null;
+
+            if (setUp)
+            {
+                success = tryRun("this",
+                        { testObject = testClass.create(); });
+            }
+            if (success)
+            {
+                success = tryRun("@BeforeEach",
+                        { testClass.beforeEach(testObject); });
+            }
             if (success)
             {
                 success = tryRun("@Test",
@@ -244,11 +244,10 @@ body
                         && success;
             }
         }
-
-        if (testObject !is null && classSetUp)
+        if (setUp)
         {
             tryRun("@AfterAll",
-                    { testClass.afterAll(testObject); });
+                    { testClass.afterAll(); });
         }
     }
 
@@ -672,10 +671,10 @@ private TestClass[] unitTestFunctions()
 
     testClass.tests = ["unittest"];
     testClass.create = () => null;
-    testClass.beforeAll = (o) {};
+    testClass.beforeAll = () {};
     testClass.beforeEach = (o) {};
     testClass.afterEach = (o) {};
-    testClass.afterAll = (o) {};
+    testClass.afterAll = () {};
 
     foreach (moduleInfo; ModuleInfo)
     {
@@ -712,9 +711,9 @@ mixin template UnitTest()
             mixin("return new " ~ typeof(this).stringof ~ "();");
         }
 
-        static void beforeAll(Object o)
+        static void beforeAll()
         {
-            mixin(_sequence(_members!(typeof(this), BeforeAll)));
+            mixin(_static(_members!(typeof(this), BeforeAll)));
         }
 
         static void beforeEach(Object o)
@@ -732,9 +731,9 @@ mixin template UnitTest()
             mixin(_sequence(_members!(typeof(this), AfterEach)));
         }
 
-        static void afterAll(Object o)
+        static void afterAll()
         {
-            mixin(_sequence(_members!(typeof(this), AfterAll)));
+            mixin(_static(_members!(typeof(this), AfterAll)));
         }
 
         testClass.create = &create;
@@ -755,6 +754,15 @@ mixin template UnitTest()
         foreach (memberFunction; memberFunctions)
             block ~= `case "` ~ memberFunction ~ `": testObject.` ~ memberFunction ~ "(); break;\n";
         block ~= "default: break;\n}\n";
+        return block;
+    }
+
+    private static string _static(in string[] memberFunctions)
+    {
+        string block = null;
+
+        foreach (memberFunction; memberFunctions)
+            block ~= memberFunction ~ "();\n";
         return block;
     }
 
