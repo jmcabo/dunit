@@ -73,8 +73,10 @@ Thanks to D's User Defined Attributes, test names no longer have to start with
 "test".
 
 Put `mixin UnitTest;` in your test class and attach `@Test`,
-`@BeforeEach`, `@AfterEach`, `@BeforeAll`, `@AfterAll`, and `@Disabled("...")`
-(borrowed from JUnit 5) to the member functions to state their purpose.
+`@BeforeEach`, `@AfterEach`, `@BeforeAll`, `@AfterAll`, `@Tag("...")`,
+and `@Disabled("...")`
+(borrowed from [JUnit 5](http://junit.org/junit5/docs/current/user-guide/))
+to the member functions to state their purpose.
 
 Test Results
 ------------

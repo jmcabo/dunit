@@ -24,6 +24,7 @@ struct TestClass
     string name;
     string[] tests;
     Disabled[string] disabled;
+    Tag[][string] tags;
 
     Object function() create;
     void function() beforeAll;
@@ -57,6 +58,8 @@ public int dunit_main(string[] args)
 
     GetoptResult result;
     string[] filters = null;
+    string[] includeTags = null;
+    string[] excludeTags = null;
     bool list = false;
     string report = null;
     bool verbose = false;
@@ -65,12 +68,15 @@ public int dunit_main(string[] args)
     try
     {
         result = getopt(args,
-                "list|l", "Display the test functions, then exit", &list,
-                "filter|f", "Select test functions matching the regular expression", &filters,
-                "verbose|v", "Display more information as the tests are run", &verbose,
-                "xml", "Display progressive XML output", &xml,
-                "report", "Write JUnit-style XML test report", &report,
-                );
+            config.caseSensitive,
+            "list|l", "Display the test functions, then exit", &list,
+            "filter|f", "Select test functions matching the regular expression", &filters,
+            "include|t", "Provide a tag to be included in the test run", &includeTags,
+            "exclude|T", "Provide a tag to be excluded from the test run", &excludeTags,
+            "verbose|v", "Display more information as the tests are run", &verbose,
+            "xml", "Display progressive XML output", &xml,
+            "report", "Write JUnit-style XML test report", &report,
+            );
     }
     catch (Exception exception)
     {
@@ -118,6 +124,18 @@ public int dunit_main(string[] args)
             }
         }
     }
+    if (!includeTags.empty)
+    {
+        testSelections = testSelections
+            .select!"!a.findAmong(b).empty"(includeTags)
+            .array;
+    }
+    if (!excludeTags.empty)
+    {
+        testSelections = testSelections
+            .select!"a.findAmong(b).empty"(excludeTags)
+            .array;
+    }
 
     if (list)
     {
@@ -157,7 +175,55 @@ public int dunit_main(string[] args)
     return (reporter.errors > 0) ? 1 : (reporter.failures > 0) ? 2 : 0;
 }
 
-public static void runTests(TestSelection[] testSelections, TestListener[] testListeners)
+private auto select(alias pred)(TestSelection[] testSelections, string[] tags)
+{
+    import std.functional : binaryFun;
+
+    bool matches(TestClass testClass, string test)
+    {
+        auto testTags = testClass.tags.get(test, null)
+            .map!(tag => tag.name);
+
+        return binaryFun!pred(testTags, tags);
+    }
+
+    TestSelection select(TestSelection testSelection)
+    {
+        string[] tests = testSelection.tests
+            .filter!(test => matches(testSelection.testClass, test))
+            .array;
+
+        return TestSelection(testSelection.testClass, tests);
+    }
+
+    return testSelections
+        .map!(testSelection => select(testSelection))
+        .filter!(testSelection => !testSelection.tests.empty);
+}
+
+private TestSelection[] restrict(alias pred)(TestSelection[] testSelections, string[] tags)
+{
+    TestSelection restrict(TestSelection testSelection)
+    {
+        string[] tests = testSelection.tests
+            .filter!(test => pred(testSelection.testClass.tags.get(test, null), tags))
+            .array;
+
+        return TestSelection(testSelection.testClass, tests);
+    }
+
+    return testSelections
+        .map!(testSelection => restrict(testSelection))
+        .filter!(testSelection => !testSelection.tests.empty)
+        .array;
+}
+
+public bool matches(Tag[] tags, string[] choices)
+{
+    return tags.any!(tag => choices.canFind(tag.name));
+}
+
+public void runTests(TestSelection[] testSelections, TestListener[] testListeners)
 in
 {
     assert(all!"a !is null"(testListeners));
@@ -218,7 +284,7 @@ body
             if (!initialized)
             {
                 setUp = tryRun("@BeforeAll",
-                        { testClass.beforeAll(); });
+                    { testClass.beforeAll(); });
                 initialized = true;
             }
 
@@ -227,27 +293,27 @@ body
             if (setUp)
             {
                 success = tryRun("this",
-                        { testObject = testClass.create(); });
+                    { testObject = testClass.create(); });
             }
             if (success)
             {
                 success = tryRun("@BeforeEach",
-                        { testClass.beforeEach(testObject); });
+                    { testClass.beforeEach(testObject); });
             }
             if (success)
             {
                 success = tryRun("@Test",
-                        { testClass.test(testObject, test); });
+                    { testClass.test(testObject, test); });
                 // run @AfterEach even if @Test failed
                 success = tryRun("@AfterEach",
-                        { testClass.afterEach(testObject); })
-                        && success;
+                    { testClass.afterEach(testObject); })
+                    && success;
             }
         }
         if (setUp)
         {
             tryRun("@AfterAll",
-                    { testClass.afterAll(); });
+                { testClass.afterAll(); });
         }
     }
 
@@ -357,7 +423,7 @@ class IssueReporter : TestListener
             foreach (i, issue; this.errors)
             {
                 writefln("%d) %s", i + 1,
-                        prettyOrigin(issue.testClass, issue.test, issue.phase));
+                    prettyOrigin(issue.testClass, issue.test, issue.phase));
                 writeln(issue.throwable.toString);
                 writeln("----------------");
             }
@@ -377,7 +443,7 @@ class IssueReporter : TestListener
                 Throwable throwable = issue.throwable;
 
                 writefln("%d) %s", i + 1,
-                        prettyOrigin(issue.testClass, issue.test, issue.phase));
+                    prettyOrigin(issue.testClass, issue.test, issue.phase));
                 writefln(throwable.description);
             }
         }
@@ -491,7 +557,7 @@ class ResultReporter : TestListener
     {
         writeln();
         writefln("Tests run: %d, Failures: %d, Errors: %d, Skips: %d",
-                this.tests, this.failures, this.errors, this.skips);
+            this.tests, this.failures, this.errors, this.skips);
 
         if (this.failures + this.errors == 0)
         {
@@ -704,7 +770,8 @@ mixin template UnitTest()
 
         testClass.name = this.classinfo.name;
         testClass.tests = _members!(typeof(this), Test);
-        testClass.disabled = _attributes!(typeof(this), Disabled);
+        testClass.disabled = _attributeByMember!(typeof(this), Disabled);
+        testClass.tags = _attributesByMember!(typeof(this), Tag);
 
         static Object create()
         {
@@ -713,7 +780,7 @@ mixin template UnitTest()
 
         static void beforeAll()
         {
-            mixin(_static(_members!(typeof(this), BeforeAll)));
+            mixin(_staticSequence(_members!(typeof(this), BeforeAll)));
         }
 
         static void beforeEach(Object o)
@@ -733,7 +800,7 @@ mixin template UnitTest()
 
         static void afterAll()
         {
-            mixin(_static(_members!(typeof(this), AfterAll)));
+            mixin(_staticSequence(_members!(typeof(this), AfterAll)));
         }
 
         testClass.create = &create;
@@ -757,7 +824,7 @@ mixin template UnitTest()
         return block;
     }
 
-    private static string _static(in string[] memberFunctions)
+    private static string _staticSequence(in string[] memberFunctions)
     {
         string block = null;
 
@@ -775,23 +842,24 @@ mixin template UnitTest()
         return block;
     }
 
-    template _members(T, Attribute)
+    template _members(T, alias attribute)
     {
         static string[] helper()
         {
+            import std.meta : AliasSeq;
+            import std.traits : hasUDA;
+
             string[] members;
 
             foreach (name; __traits(allMembers, T))
             {
                 static if (__traits(compiles, __traits(getMember, T, name)))
                 {
-                    import std.typecons;
+                    alias member = AliasSeq!(__traits(getMember, T, name));
 
-                    alias member = TypeTuple!(__traits(getMember, T, name));
-
-                    static if (__traits(compiles, _hasAttribute!(member, Attribute)))
+                    static if (__traits(compiles, hasUDA!(member, attribute)))
                     {
-                        static if (_hasAttribute!(member, Attribute))
+                        static if (hasUDA!(member, attribute))
                             members ~= name;
                     }
                 }
@@ -802,67 +870,91 @@ mixin template UnitTest()
         enum _members = helper;
     }
 
-    template _attributes(T, Attribute)
+    template _attributeByMember(T, Attribute)
     {
         static Attribute[string] helper()
         {
-            Attribute[string] attributes;
+            import std.format : format;
+            import std.meta : AliasSeq;
+
+            Attribute[string] attributeByMember;
 
             foreach (name; __traits(allMembers, T))
             {
                 static if (__traits(compiles, __traits(getMember, T, name)))
                 {
-                    import std.typecons;
+                    alias member = AliasSeq!(__traits(getMember, T, name));
 
-                    alias member = TypeTuple!(__traits(getMember, T, name));
-
-                    static if (__traits(compiles, _hasAttribute!(member, Attribute)))
+                    static if (__traits(compiles, _getUDAs!(member, Attribute)))
                     {
-                        static if (_hasAttribute!(member, Attribute))
-                            attributes[name] = _findAttribute!(member, Attribute);
+                        alias attributes = _getUDAs!(member, Attribute);
+
+                        static if (attributes.length > 0)
+                        {
+                            static assert(attributes.length == 1,
+                                format("%s.%s should not have more than one attribute @%s",
+                                    T.stringof, name, Attribute.stringof));
+
+                            attributeByMember[name] = attributes[0];
+                        }
                     }
                 }
             }
-            return attributes;
+            return attributeByMember;
         }
 
-        enum _attributes = helper;
+        enum _attributeByMember = helper;
     }
 
-    template _findAttribute(alias member, Attribute)
+    template _attributesByMember(T, Attribute)
+    {
+        static Attribute[][string] helper()
+        {
+            import std.meta : AliasSeq;
+
+            Attribute[][string] attributesByMember;
+
+            foreach (name; __traits(allMembers, T))
+            {
+                static if (__traits(compiles, __traits(getMember, T, name)))
+                {
+                    alias member = AliasSeq!(__traits(getMember, T, name));
+
+                    static if (__traits(compiles, _getUDAs!(member, Attribute)))
+                    {
+                        alias attributes = _getUDAs!(member, Attribute);
+
+                        static if (attributes.length > 0)
+                            attributesByMember[name] = attributes;
+                    }
+                }
+            }
+            return attributesByMember;
+        }
+
+        enum _attributesByMember = helper;
+    }
+
+    // Gets user-defined attributes, but also gets Attribute.init for @Attribute.
+    template _getUDAs(alias member, Attribute)
     {
         static auto helper()
         {
+            Attribute[] attributes;
+
             static if (__traits(compiles, __traits(getAttributes, member)))
             {
                 foreach (attribute; __traits(getAttributes, member))
                 {
                     static if (is(attribute == Attribute))
-                        return Attribute.init;
+                        attributes ~= Attribute.init;
                     static if (is(typeof(attribute) == Attribute))
-                        return attribute;
+                        attributes ~= attribute;
                 }
             }
-            assert(0);
+            return attributes;
         }
 
-        enum _findAttribute = helper;
-    }
-
-    template _hasAttribute(alias member, Attribute)
-    {
-        static bool helper()
-        {
-            foreach (attribute; __traits(getAttributes, member))
-            {
-                static if (is(attribute == Attribute))
-                    return true;
-                static if (is(typeof(attribute) == Attribute))
-                    return true;
-            }
-            return false;
-        }
-
-        enum bool _hasAttribute = helper;
+        enum _getUDAs = helper;
     }
 }

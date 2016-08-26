@@ -143,7 +143,10 @@ class TestingThisAndThat
     }
 
     // test function can even be private
+    // tagged test functions can be selected to be included or excluded
     @Test
+    @Tag("fast")
+    @Tag("smoke")
     private void success()
     {
         testResult(true);
@@ -207,6 +210,7 @@ class TestingAsynchronousCode
     }
 
     @Test
+    @Tag("slow")
     public void test()
     {
         assertFalse(done);
