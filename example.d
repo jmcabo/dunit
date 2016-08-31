@@ -65,7 +65,7 @@ class Test
 /**
  * This example demonstrates the order in which the fixture functions run.
  * The functions 'setUp' and 'tearDown' run before and after each test.
- * The functions 'setUpClass' and 'tearDownClass' run once before and after
+ * The functions 'setUpAll' and 'tearDownAll' run once before and after
  * all tests in the class.
  */
 class TestFixture

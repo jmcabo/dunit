@@ -8,6 +8,10 @@ module fluent_assertion;
 import dunit;
 import unit_threaded.should : shouldBeIn, shouldEqual, shouldNotEqual;
 
+/**
+ * This example demonstrates the reporting of test failures
+ * with unit-threaded's fluent assertions.
+ */
 class Test
 {
     mixin UnitTest;
