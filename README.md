@@ -126,6 +126,19 @@ So, if you prefer TestNG's order of arguments,
 import `dunit.ng` or `dunit.ng.assertion`
 instead of the conventional `dunit` and `dunit.assertion`.
 
+Fluent Assertions
+-----------------
+
+The xUnit Testing Framework also supports the "fluent assertions" from
+[unit-threaded](https://github.com/atilaneves/unit-threaded).
+
+For an example, have a look at [fluent-assertions](fluent_assertions.d).
+Build and run the example using
+
+    dub --config=fluent-assertions
+
+(When you get three failures, everything works fine.)
+
 Related Projects
 ----------------
 

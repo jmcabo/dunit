@@ -1,7 +1,7 @@
 {
     "name": "d-unit",
     "description": "xUnit Testing Framework for D",
-    "copyright": "Copyright © 2013, Mario Kröplin",
+    "copyright": "Copyright © 2016, Mario Kröplin",
     "authors": ["Juan Manuel Cabo", "Mario Kröplin"],
     "license" : "BSL-1.0",
     "dependencies": {},
@@ -15,6 +15,14 @@
             "name": "example",
             "targetType": "executable",
             "sourceFiles": ["example.d"]
+        },
+        {
+            "name": "fluent-assertions",
+            "targetType": "executable",
+            "sourceFiles": ["fluent_assertions.d"],
+            "dependencies": {
+                "unit-threaded": ">=0.6.27"
+            }
         }
     ]
 }

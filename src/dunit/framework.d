@@ -234,7 +234,25 @@ body
     {
         try
         {
-            action();
+            static if (__traits(compiles, { import unit_threaded.should : UnitTestException; }))
+            {
+                import unit_threaded.should : UnitTestException;
+
+                try
+                {
+                    action();
+                }
+                catch (UnitTestException exception)
+                {
+                    // convert exception to "fix" the message format
+                    throw new AssertException('\n' ~ exception.msg,
+                        exception.file, exception.line, exception);
+                }
+            }
+            else
+            {
+                action();
+            }
             return true;
         }
         catch (AssertException exception)

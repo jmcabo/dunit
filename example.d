@@ -1,7 +1,7 @@
 #!/usr/bin/env dub
 /+ dub.sdl:
 name "example"
-dependency "d-unit" version=">=0.7.2"
+dependency "d-unit" version=">=0.8.0"
 +/
 
 //          Copyright Juan Manuel Cabo 2012.
