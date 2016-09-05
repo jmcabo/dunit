@@ -7,7 +7,8 @@ module dunit.ng.assertion;
 
 public import dunit.assertion : assertTrue, assertFalse, assertEmpty, assertNotEmpty, assertNull, assertNotNull,
     assertAll, expectThrows, fail,
-    assertGreaterThan, assertGreaterThanOrEqual, assertLessThan, assertLessThanOrEqual, assertOp,
+    assertGreaterThan, assertGreaterThanOrEqual, assertLessThan, assertLessThanOrEqual,
+    assertIn, assertNotIn, assertOp,
     assertEventually;
 
 /**

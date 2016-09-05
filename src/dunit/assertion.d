@@ -72,11 +72,11 @@ class AssertAllException : AssertException
  * Asserts that a condition is true.
  * Throws: AssertException otherwise
  */
-void assertTrue(bool condition, lazy string msg = null,
+void assertTrue(T)(T condition, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
-    if (condition)
+    if (cast(bool) condition)
         return;
 
     fail(msg, file, line);
@@ -86,6 +86,7 @@ void assertTrue(bool condition, lazy string msg = null,
 unittest
 {
     assertTrue(true);
+    assertTrue("foo" in ["foo": "bar"]);
 
     auto exception = expectThrows!AssertException(assertTrue(false));
 
@@ -96,11 +97,11 @@ unittest
  * Asserts that a condition is false.
  * Throws: AssertException otherwise
  */
-void assertFalse(bool condition, lazy string msg = null,
+void assertFalse(T)(T condition, lazy string msg = null,
         string file = __FILE__,
         size_t line = __LINE__)
 {
-    if (!condition)
+    if (!cast(bool) condition)
         return;
 
     fail(msg, file, line);
@@ -110,6 +111,7 @@ void assertFalse(bool condition, lazy string msg = null,
 unittest
 {
     assertFalse(false);
+    assertFalse("foo" in ["bar": "foo"]);
 
     auto exception = expectThrows!AssertException(assertFalse(true));
 
@@ -245,15 +247,15 @@ void assertArrayEquals(T, U, V)(in T[V] expected, in U[V] actual, lazy string ms
         if (key in actual)
         {
             assertEquals(expected[key], actual[key],
-                    // format string key with double quotes
-                    format(header ~ "mismatch at key %(%s%)", [key]),
+                    format(header ~ "mismatch at key %s", key.repr),
                     file, line);
         }
 
     auto difference = setSymmetricDifference(expected.keys.sort(), actual.keys.sort());
 
     assertEmpty(difference,
-            "key mismatch; difference: %(%s, %)".format(difference));
+            format("key mismatch; difference: %(%s, %)", difference),
+            file, line);
 }
 
 ///
@@ -579,6 +581,8 @@ alias assertGreaterThan = assertOp!">";
 alias assertGreaterThanOrEqual = assertOp!">=";
 alias assertLessThan = assertOp!"<";
 alias assertLessThanOrEqual = assertOp!"<=";
+alias assertIn = assertOp!"in";
+alias assertNotIn = assertOp!"!in";
 
 /**
  * Asserts that the condition (lhs op rhs) is satisfied.
@@ -595,7 +599,8 @@ template assertOp(string op)
 
         string header = (msg.empty) ? null : msg ~ "; ";
 
-        fail("%scondition (%s %s %s) not satisfied".format(header, lhs, op, rhs),
+        fail(format("%scondition (%s %s %s) not satisfied",
+                header, lhs.repr, op, rhs.repr),
                 file, line);
     }
 }
@@ -603,11 +608,21 @@ template assertOp(string op)
 ///
 unittest
 {
-    assertOp!"<"(2, 3);
+    assertLessThan(2, 3);
 
-    auto exception = expectThrows!AssertException(assertOp!">="(2, 3));
+    auto exception = expectThrows!AssertException(assertGreaterThanOrEqual(2, 3));
 
     assertEquals("condition (2 >= 3) not satisfied", exception.msg);
+}
+
+///
+unittest
+{
+    assertIn("foo", ["foo": "bar"]);
+
+    auto exception = expectThrows!AssertException(assertNotIn("foo", ["foo": "bar"]));
+
+    assertEquals(`condition ("foo" !in ["foo":"bar"]) not satisfied`, exception.msg);
 }
 
 /**
@@ -652,4 +667,10 @@ unittest
     auto exception = expectThrows!AssertException(assertEventually({ return false; }));
 
     assertEquals("timed out", exception.msg);
+}
+
+private string repr(T)(T value)
+{
+    // format string key with double quotes
+    return format("%(%s%)", [value]);
 }
