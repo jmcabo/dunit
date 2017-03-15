@@ -462,7 +462,7 @@ class IssueReporter : TestListener
 
                 writefln("%d) %s", i + 1,
                     prettyOrigin(issue.testClass, issue.test, issue.phase));
-                writefln(throwable.description);
+                writeln(throwable.description);
             }
         }
     }
