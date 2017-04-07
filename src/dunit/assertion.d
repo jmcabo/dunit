@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2016.
+//          Copyright Mario Kröplin 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -83,7 +83,7 @@ void assertTrue(T)(T condition, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertTrue(true);
     assertTrue("foo" in ["foo": "bar"]);
@@ -108,7 +108,7 @@ void assertFalse(T)(T condition, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertFalse(false);
     assertFalse("foo" in ["bar": "foo"]);
@@ -139,7 +139,7 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertEquals("foo", "foo");
 
@@ -169,7 +169,7 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe /*pure*/ unittest  // format is impure for floating point values
 {
     assertEquals(1, 1.01);
 
@@ -197,7 +197,7 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertEquals(42, 42);
 
@@ -207,7 +207,7 @@ unittest
 }
 
 ///
-unittest
+unittest  // Object.opEquals is impure
 {
     Object foo = new Object();
     Object bar = null;
@@ -259,9 +259,9 @@ void assertArrayEquals(T, U, V)(in T[V] expected, in U[V] actual, lazy string ms
 }
 
 ///
-unittest
+pure unittest  // keys, values, byKey, byValue not usable in @safe context
 {
-    double[string] expected = ["foo": 1, "bar": 2];
+    int[string] expected = ["foo": 1, "bar": 2];
 
     assertArrayEquals(expected, ["foo": 1, "bar": 2]);
 
@@ -302,16 +302,14 @@ void assertRangeEquals(R1, R2)(R1 expected, R2 actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
-    double[] expected = [0, 1];
+    int[] expected = [0, 1];
 
     assertRangeEquals(expected, [0, 1]);
 
     AssertException exception;
 
-    exception = expectThrows!AssertException(assertRangeEquals(expected, [0, 1.2, 3]));
-    assertEquals("mismatch at index 1; expected: <1> but was: <1.2>", exception.msg);
     exception = expectThrows!AssertException(assertRangeEquals(expected, [0]));
     assertEquals("length mismatch at index 1; expected: <1> but was: empty", exception.msg);
     exception = expectThrows!AssertException(assertRangeEquals(expected, [0, 1, 2]));
@@ -335,7 +333,7 @@ void assertEmpty(T)(T actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertEmpty([]);
 
@@ -359,7 +357,7 @@ void assertNotEmpty(T)(T actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertNotEmpty([1, 2, 3]);
 
@@ -383,7 +381,7 @@ void assertNull(T)(T actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     Object foo = new Object();
 
@@ -409,7 +407,7 @@ void assertNotNull(T)(T actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     Object foo = new Object();
 
@@ -438,7 +436,7 @@ void assertSame(T, U)(T expected, U actual, lazy string msg = null,
 }
 
 ///
-unittest
+unittest  // format is impure and not safe for Object
 {
     Object foo = new Object();
     Object bar = new Object();
@@ -468,7 +466,7 @@ void assertNotSame(T, U)(T expected, U actual, lazy string msg = null,
 }
 
 ///
-unittest
+@safe pure unittest
 {
     Object foo = new Object();
     Object bar = new Object();
@@ -484,7 +482,7 @@ unittest
  * Asserts that all assertions pass.
  * Throws: AssertAllException otherwise
  */
-void assertAll(void delegate()[] assertions  ...)
+void assertAll(void delegate() @safe [] assertions ...) @safe
 {
     AssertException[] exceptions = null;
 
@@ -504,7 +502,7 @@ void assertAll(void delegate()[] assertions  ...)
 }
 
 ///
-unittest
+@safe unittest
 {
     assertAll(
         assertTrue(true),
@@ -541,7 +539,7 @@ T expectThrows(T : Throwable = Exception, E)(lazy E expression, lazy string msg 
 }
 
 ///
-unittest
+@safe pure unittest
 {
     import std.exception : enforce;
 
@@ -551,7 +549,7 @@ unittest
 }
 
 ///
-unittest
+@safe pure unittest
 {
     auto exception = expectThrows!AssertException(expectThrows(42));
 
@@ -564,13 +562,13 @@ unittest
  */
 void fail(string msg = null,
         string file = __FILE__,
-        size_t line = __LINE__)
+        size_t line = __LINE__) @safe pure
 {
     throw new AssertException(msg, file, line);
 }
 
 ///
-unittest
+@safe pure unittest
 {
     auto exception = expectThrows!AssertException(fail());
 
@@ -606,7 +604,7 @@ template assertOp(string op)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertLessThan(2, 3);
 
@@ -616,7 +614,7 @@ unittest
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assertIn("foo", ["foo": "bar"]);
 

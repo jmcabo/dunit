@@ -1,4 +1,4 @@
-//          Copyright Mario Kröplin 2016.
+//          Copyright Mario Kröplin 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -6,7 +6,7 @@
 module fluent_assertion;
 
 import dunit;
-import unit_threaded.should : shouldBeIn, shouldEqual, shouldNotEqual;
+import unit_threaded.should;
 
 /**
  * This example demonstrates the reporting of test failures
@@ -17,19 +17,19 @@ class Test
     mixin UnitTest;
 
     @Test
-    public void shouldEqualFailure()
+    public void shouldEqualFailure() @safe pure
     {
         "bar".shouldEqual("baz");
     }
 
     @Test
-    public void shouldNotEqualFailure()
+    public void shouldNotEqualFailure() @safe pure
     {
         "foo".shouldNotEqual("foo");
     }
 
     @Test
-    public void shouldBeInFailure()
+    public void shouldBeInFailure() @safe pure
     {
         42.shouldBeIn([0, 1, 2]);
     }

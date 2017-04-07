@@ -5,7 +5,7 @@ dependency "d-unit" version=">=0.8.0"
 +/
 
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2016.
+//          Copyright Mario Kröplin 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -26,7 +26,7 @@ class Test
     mixin UnitTest;
 
     @Test
-    public void assertEqualsFailure()
+    public void assertEqualsFailure() @safe pure
     {
         string expected = "bar";
         string actual = "baz";
@@ -35,7 +35,7 @@ class Test
     }
 
     @Test
-    public void assertAssocArrayEqualsFailure()
+    public void assertAssocArrayEqualsFailure() pure
     {
         string[int] expected = [1: "foo", 2: "bar"];
         string[int] actual = [1: "foo", 2: "baz"];
@@ -44,7 +44,7 @@ class Test
     }
 
     @Test
-    public void assertRangeEqualsFailure()
+    public void assertRangeEqualsFailure() @safe pure
     {
         int[] expected = [0, 1, 1, 2];
         auto actual = iota(0, 3);
@@ -53,7 +53,7 @@ class Test
     }
 
     @Test
-    public void assertAllFailure()
+    public void assertAllFailure() @safe
     {
         assertAll(
             assertLessThan(6 * 7, 42),
@@ -102,13 +102,13 @@ class TestFixture
     }
 
     @Test
-    public void test1()
+    public void test1() @safe pure
     {
         debug writeln("@test1()");
     }
 
     @Test
-    public void test2()
+    public void test2() @safe pure
     {
         debug writeln("@test2()");
     }
@@ -137,7 +137,7 @@ class TestingThisAndThat
 
     // test function can have default arguments
     @Test
-    public void testResult(bool actual = true)
+    public void testResult(bool actual = true) @safe pure
     {
         assertTrue(actual);
     }
@@ -147,7 +147,7 @@ class TestingThisAndThat
     @Test
     @Tag("fast")
     @Tag("smoke")
-    private void success()
+    private void success() @safe pure
     {
         testResult(true);
     }
@@ -155,21 +155,21 @@ class TestingThisAndThat
     // disabled test function
     @Test
     @Disabled("not ready yet")
-    public void failure()
+    public void failure() @safe pure
     {
         testResult(false);
     }
 
     // failed contracts are errors, not failures
     @Test
-    public void error()
+    public void error() @safe pure
     {
         assert(false);
     }
 
     // expected exception can be further verified
     @Test
-    public void testException()
+    public void testException() @safe pure
     {
         import std.exception : enforce;
 

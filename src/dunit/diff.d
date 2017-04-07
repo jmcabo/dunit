@@ -1,4 +1,4 @@
-//          Copyright Mario Kröplin 2013.
+//          Copyright Mario Kröplin 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,7 +12,7 @@ import std.typecons;
 /**
  * Returns a description of the difference between the strings.
  */
-string description(string expected, string actual)
+string description(string expected, string actual) @safe pure
 {
     const MAX_LENGTH = 20;
     auto result = diff(expected, actual);
@@ -27,7 +27,7 @@ string description(string expected, string actual)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(description("ab", "Ab") == "expected: <<a>b> but was: <<A>b>");
     assert(description("a\nb", "A\nb") == "expected:\n<a>\nb\nbut was:\n<A>\nb");
@@ -60,7 +60,7 @@ Tuple!(string, string) diff(string)(string lhs, string rhs)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(diff("abc", "abc") == tuple("abc", "abc"));
     // highlight difference
