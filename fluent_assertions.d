@@ -1,3 +1,10 @@
+#!/usr/bin/env dub
+/+ dub.sdl:
+name "example"
+dependency "d-unit" version=">=0.8.0"
+dependency "unit-threaded" version=">=0.6.35"
++/
+
 //          Copyright Mario Kröplin 2017.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at

@@ -670,5 +670,5 @@ unittest
 private string repr(T)(T value)
 {
     // format string key with double quotes
-    return format("%(%s%)", [value]);
+    return format("%(%s%)", value.only);
 }
