@@ -34,7 +34,7 @@ class AssertException : Exception
  */
 class AssertAllException : AssertException
 {
-    AssertException[] exceptions;
+    private AssertException[] exceptions;
 
     @safe pure nothrow this(AssertException[] exceptions,
             string file = __FILE__,
@@ -48,7 +48,7 @@ class AssertAllException : AssertException
         super(msg, file, line, next);
     }
 
-    @safe pure nothrow static string heading(size_t count)
+    private @safe pure nothrow static string heading(size_t count)
     {
         if (count == 1)
             return "1 assertion failure:";
@@ -57,6 +57,9 @@ class AssertAllException : AssertException
     }
 }
 
+/**
+ * Returns a description of the throwable.
+ */
 @safe pure nothrow string description(Throwable throwable)
 {
     with (throwable)

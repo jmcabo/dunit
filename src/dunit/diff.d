@@ -15,8 +15,8 @@ import std.typecons;
 string description(string expected, string actual) @safe pure
 {
     const MAX_LENGTH = 20;
-    auto result = diff(expected, actual);
-    bool oneLiner = max(result[0].length, result[1].length) <= MAX_LENGTH
+    const result = diff(expected, actual);
+    const oneLiner = max(result[0].length, result[1].length) <= MAX_LENGTH
             && !result[0].canFind("\n", "\r")
             && !result[1].canFind("\n", "\r");
 

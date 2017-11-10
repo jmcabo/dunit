@@ -11,6 +11,9 @@ enum Color { red, green, yellow, onRed, onGreen, onYellow }
 
 version (Posix)
 {
+    /**
+     * Writes the text in the given color, if possible.
+     */
     public void writec(Color color, string text)
     {
         if (canUseColor())
@@ -57,7 +60,7 @@ version (Posix)
         if (!computed)
         {
             // disable colors if the output is written to a file or pipe instead of a tty
-            import core.sys.posix.unistd;
+            import core.sys.posix.unistd : isatty;
 
             useColor = isatty(stdout.fileno()) != 0;
             computed = true;
@@ -68,6 +71,9 @@ version (Posix)
 
 version (Windows)
 {
+    /**
+     * Writes the text in the given color, if possible.
+     */
     public void writec(Color color, string text)
     {
         if (canUseColor())

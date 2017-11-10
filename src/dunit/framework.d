@@ -50,11 +50,14 @@ mixin template Main()
     }
 }
 
+/**
+ * Runs the tests according to the command-line arguments.
+ */
 public int dunit_main(string[] args)
 {
-    import std.getopt;
-    import std.path;
-    import std.regex;
+    import std.getopt : config, defaultGetoptPrinter, getopt, GetoptResult;
+    import std.path : baseName;
+    import std.regex : match;
 
     GetoptResult result;
     string[] filters = null;
@@ -341,6 +344,10 @@ body
 
 private __gshared TestListener[] testListeners = null;
 
+/**
+ * Registered implementations of this interface will be notified
+ * about events that occur during the test run.
+ */
 interface TestListener
 {
     public void enterClass(string className);
@@ -377,6 +384,9 @@ interface TestListener
     }
 }
 
+/**
+ * Writes a "progress bar", followed by the errors and the failures.
+ */
 class IssueReporter : TestListener
 {
     private struct Issue
@@ -468,6 +478,9 @@ class IssueReporter : TestListener
     }
 }
 
+/**
+ * Writes a detailed test report.
+ */
 class DetailReporter : TestListener
 {
     private string test;
@@ -511,7 +524,7 @@ class DetailReporter : TestListener
     {
         if (success)
         {
-            double elapsed = (TickDuration.currSystemTick() - this.startTime).usecs() / 1_000.0;
+            const elapsed = (TickDuration.currSystemTick() - this.startTime).usecs() / 1_000.0;
 
             writec(Color.green, "    OK: ");
             writefln("%6.2f ms  %s", elapsed, this.test);
@@ -529,6 +542,9 @@ class DetailReporter : TestListener
     }
  }
 
+/**
+ * Writes a summary about the tests run.
+ */
 class ResultReporter : TestListener
 {
     private uint tests = 0;
@@ -590,9 +606,12 @@ class ResultReporter : TestListener
     }
 }
 
+/**
+ * Writes progressive XML output.
+ */
 class XmlReporter : TestListener
 {
-    import std.xml;
+    import std.xml : Document, Element, Tag;
 
     private Document testCase;
     private string className;
@@ -622,7 +641,7 @@ class XmlReporter : TestListener
     public void addFailure(string phase, AssertException exception)
     {
         auto element = new Element("failure");
-        string message = format("%s %s", phase, exception.description);
+        const message = format("%s %s", phase, exception.description);
 
         element.tag.attr["message"] = message;
         this.testCase ~= element;
@@ -631,7 +650,7 @@ class XmlReporter : TestListener
     public void addError(string phase, Throwable throwable)
     {
         auto element = new Element("error", throwable.info.toString);
-        string message = format("%s %s", phase, throwable.description);
+        const message = format("%s %s", phase, throwable.description);
 
         element.tag.attr["message"] = message;
         this.testCase ~= element;
@@ -639,7 +658,7 @@ class XmlReporter : TestListener
 
     public void exitTest(bool success)
     {
-        double elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
+        const elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
         this.testCase.tag.attr["time"] = format("%.3f", elapsed);
 
@@ -654,9 +673,12 @@ class XmlReporter : TestListener
     }
 }
 
+/**
+ * Writes a JUnit-style XML test report.
+ */
 class ReportReporter : TestListener
 {
-    import std.xml;
+    import std.xml : Document, Element, Tag;
 
     private string fileName;
     private Document document;
@@ -706,7 +728,7 @@ class ReportReporter : TestListener
         if (this.testCase.elements.empty)
         {
             auto element = new Element("failure");
-            string message = format("%s %s", phase, exception.description);
+            const message = format("%s %s", phase, exception.description);
 
             element.tag.attr["message"] = message;
             this.testCase ~= element;
@@ -719,7 +741,7 @@ class ReportReporter : TestListener
         if (this.testCase.elements.empty)
         {
             auto element = new Element("error", throwable.info.toString);
-            string message = format("%s %s", phase, throwable.description);
+            const message = format("%s %s", phase, throwable.description);
 
             element.tag.attr["message"] = message;
             this.testCase ~= element;
@@ -728,14 +750,14 @@ class ReportReporter : TestListener
 
     public void exitTest(bool success)
     {
-        double elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
+        const elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
         this.testCase.tag.attr["time"] = format("%.3f", elapsed);
     }
 
     public void exit()
     {
-        import std.file;
+        import std.file : write;
 
         string report = join(this.document.pretty(4), "\n") ~ "\n";
 
