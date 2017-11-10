@@ -107,11 +107,6 @@ Or just focus on the issues:
 
     ./example.d --filter Test.assert --filter error
 
-Alternatively, build and run the example using
-[dub](https://github.com/rejectedsoftware/dub):
-
-    dub --build=plain --config=example -- --verbose
-
 "Next Generation"
 -----------------
 
@@ -135,7 +130,7 @@ The xUnit Testing Framework also supports the "fluent assertions" from
 For an example, have a look at [fluent-assertions](fluent_assertions.d).
 Build and run the example using
 
-    dub --config=fluent-assertions
+    ./fluent_assertions.d
 
 (When you get three failures, everything works fine.)
 

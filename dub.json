@@ -5,24 +5,5 @@
     "authors": ["Juan Manuel Cabo", "Mario Kröplin"],
     "license" : "BSL-1.0",
     "dependencies": {},
-    "configurations":
-    [
-        {
-            "name": "library",
-            "targetType": "library"
-        },
-        {
-            "name": "example",
-            "targetType": "executable",
-            "sourceFiles": ["example.d"]
-        },
-        {
-            "name": "fluent-assertions",
-            "targetType": "executable",
-            "sourceFiles": ["fluent_assertions.d"],
-            "dependencies": {
-                "unit-threaded": ">=0.6.35"
-            }
-        }
-    ]
+    "targetType": "library"
 }
