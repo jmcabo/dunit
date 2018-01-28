@@ -757,9 +757,14 @@ class ReportReporter : TestListener
 
     public void exit()
     {
-        import std.file : write;
+        import std.file : write, mkdirRecurse, exists;
+        import std.path: dirName;
 
         string report = join(this.document.pretty(4), "\n") ~ "\n";
+        string dirPath = dirName(this.fileName);
+
+        if (!exists(dirPath))
+            mkdirRecurse(dirPath);
 
         write(this.fileName, report);
     }
