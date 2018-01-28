@@ -1,5 +1,5 @@
 //          Copyright Juan Manuel Cabo 2012.
-//          Copyright Mario Kröplin 2016.
+//          Copyright Mario Kröplin 2018.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -360,7 +360,7 @@ interface TestListener
 
     public static string prettyOrigin(string className, string test, string phase)
     {
-        string origin = prettyOrigin(test, phase);
+        const origin = prettyOrigin(test, phase);
 
         if (origin.startsWith('@'))
             return className ~ origin;
@@ -402,40 +402,40 @@ class IssueReporter : TestListener
     private string className;
     private string test;
 
-    public void enterClass(string className)
+    public override void enterClass(string className)
     {
         this.className = className;
     }
 
-    public void enterTest(string test)
+    public override void enterTest(string test)
     {
         this.test = test;
     }
 
-    public void skip(string reason)
+    public override void skip(string reason)
     {
         writec(Color.onYellow, "S");
     }
 
-    public void addFailure(string phase, AssertException exception)
+    public override void addFailure(string phase, AssertException exception)
     {
         this.failures ~= Issue(this.className, this.test, phase, exception);
         writec(Color.onRed, "F");
     }
 
-    public void addError(string phase, Throwable throwable)
+    public override void addError(string phase, Throwable throwable)
     {
         this.errors ~= Issue(this.className, this.test, phase, throwable);
         writec(Color.onRed, "E");
     }
 
-    public void exitTest(bool success)
+    public override void exitTest(bool success)
     {
         if (success)
             writec(Color.onGreen, ".");
     }
 
-    public void exit()
+    public override void exit()
     {
         writeln();
 
@@ -486,18 +486,18 @@ class DetailReporter : TestListener
     private string test;
     private TickDuration startTime;
 
-    public void enterClass(string className)
+    public override void enterClass(string className)
     {
         writeln(className);
     }
 
-    public void enterTest(string test)
+    public override void enterTest(string test)
     {
         this.test = test;
         this.startTime = TickDuration.currSystemTick();
     }
 
-    public void skip(string reason)
+    public override void skip(string reason)
     {
         writec(Color.yellow, "    SKIP: ");
         writeln(this.test);
@@ -505,14 +505,14 @@ class DetailReporter : TestListener
             writeln(indent(format(`"%s"`, reason)));
     }
 
-    public void addFailure(string phase, AssertException exception)
+    public override void addFailure(string phase, AssertException exception)
     {
         writec(Color.red, "    FAILURE: ");
         writeln(prettyOrigin(this.test, phase));
         writeln(indent(exception.description));
     }
 
-    public void addError(string phase, Throwable throwable)
+    public override void addError(string phase, Throwable throwable)
     {
         writec(Color.red, "    ERROR: ");
         writeln(prettyOrigin(this.test, phase));
@@ -520,7 +520,7 @@ class DetailReporter : TestListener
         writeln("----------------");
     }
 
-    public void exitTest(bool success)
+    public override void exitTest(bool success)
     {
         if (success)
         {
@@ -531,12 +531,12 @@ class DetailReporter : TestListener
         }
     }
 
-    public void exit()
+    public override void exit()
     {
         // do nothing
     }
 
-    private string indent(string s, string indent = "        ")
+    private static string indent(string s, string indent = "        ")
     {
         return s.splitLines(KeepTerminator.yes).map!(line => indent ~ line).join;
     }
@@ -552,42 +552,42 @@ class ResultReporter : TestListener
     private uint errors = 0;
     private uint skips = 0;
 
-    public void enterClass(string className)
+    public override void enterClass(string className)
     {
         // do nothing
     }
 
-    public void enterTest(string test)
+    public override void enterTest(string test)
     {
         ++this.tests;
     }
 
-    public void skip(string reason)
+    public override void skip(string reason)
     {
         ++this.skips;
     }
 
-    public void addFailure(string phase, AssertException exception)
+    public override void addFailure(string phase, AssertException exception)
     {
         ++this.failures;
     }
 
-    public void addError(string phase, Throwable throwable)
+    public override void addError(string phase, Throwable throwable)
     {
         ++this.errors;
     }
 
-    public void exitTest(bool success)
+    public override void exitTest(bool success)
     {
         // do nothing
     }
 
-    public void exit()
+    public override void exit()
     {
         // do nothing
     }
 
-    public void write()
+    public void write() const
     {
         writeln();
         writefln("Tests run: %d, Failures: %d, Errors: %d, Skips: %d",
@@ -617,12 +617,12 @@ class XmlReporter : TestListener
     private string className;
     private TickDuration startTime;
 
-    public void enterClass(string className)
+    public override void enterClass(string className)
     {
         this.className = className;
     }
 
-    public void enterTest(string test)
+    public override void enterTest(string test)
     {
         this.testCase = new Document(new Tag("testcase"));
         this.testCase.tag.attr["classname"] = this.className;
@@ -630,7 +630,7 @@ class XmlReporter : TestListener
         this.startTime = TickDuration.currSystemTick();
     }
 
-    public void skip(string reason)
+    public override void skip(string reason)
     {
         auto element = new Element("skipped");
 
@@ -638,7 +638,7 @@ class XmlReporter : TestListener
         this.testCase ~= element;
     }
 
-    public void addFailure(string phase, AssertException exception)
+    public override void addFailure(string phase, AssertException exception)
     {
         auto element = new Element("failure");
         const message = format("%s %s", phase, exception.description);
@@ -647,7 +647,7 @@ class XmlReporter : TestListener
         this.testCase ~= element;
     }
 
-    public void addError(string phase, Throwable throwable)
+    public override void addError(string phase, Throwable throwable)
     {
         auto element = new Element("error", throwable.info.toString);
         const message = format("%s %s", phase, throwable.description);
@@ -656,18 +656,18 @@ class XmlReporter : TestListener
         this.testCase ~= element;
     }
 
-    public void exitTest(bool success)
+    public override void exitTest(bool success)
     {
         const elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
         this.testCase.tag.attr["time"] = format("%.3f", elapsed);
 
-        string report = join(this.testCase.pretty(4), "\n");
+        const report = join(this.testCase.pretty(4), "\n");
 
         writeln(report);
     }
 
-    public void exit()
+    public override void exit()
     {
         // do nothing
     }
@@ -680,7 +680,7 @@ class ReportReporter : TestListener
 {
     import std.xml : Document, Element, Tag;
 
-    private string fileName;
+    private const string fileName;
     private Document document;
     private Element testSuite;
     private Element testCase;
@@ -696,12 +696,12 @@ class ReportReporter : TestListener
         this.document ~= this.testSuite;
     }
 
-    public void enterClass(string className)
+    public override void enterClass(string className)
     {
         this.className = className;
     }
 
-    public void enterTest(string test)
+    public override void enterTest(string test)
     {
         this.testCase = new Element("testcase");
         this.testCase.tag.attr["classname"] = this.className;
@@ -710,7 +710,7 @@ class ReportReporter : TestListener
         this.startTime = TickDuration.currSystemTick();
     }
 
-    public void skip(string reason)
+    public override void skip(string reason)
     {
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
@@ -722,7 +722,7 @@ class ReportReporter : TestListener
         }
     }
 
-    public void addFailure(string phase, AssertException exception)
+    public override void addFailure(string phase, AssertException exception)
     {
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
@@ -735,7 +735,7 @@ class ReportReporter : TestListener
         }
     }
 
-    public void addError(string phase, Throwable throwable)
+    public override void addError(string phase, Throwable throwable)
     {
         // avoid wrong interpretation of more than one child
         if (this.testCase.elements.empty)
@@ -748,24 +748,21 @@ class ReportReporter : TestListener
         }
     }
 
-    public void exitTest(bool success)
+    public override void exitTest(bool success)
     {
         const elapsed = (TickDuration.currSystemTick() - this.startTime).msecs() / 1_000.0;
 
         this.testCase.tag.attr["time"] = format("%.3f", elapsed);
     }
 
-    public void exit()
+    public override void exit()
     {
-        import std.file : write, mkdirRecurse, exists;
+        import std.file : mkdirRecurse, write;
         import std.path: dirName;
 
-        string report = join(this.document.pretty(4), "\n") ~ "\n";
-        string dirPath = dirName(this.fileName);
+        const report = join(this.document.pretty(4), "\n") ~ "\n";
 
-        if (!exists(dirPath))
-            mkdirRecurse(dirPath);
-
+        mkdirRecurse(this.fileName.dirName);
         write(this.fileName, report);
     }
 }
