@@ -67,7 +67,7 @@ public int dunit_main(string[] args)
     string report = null;
     bool verbose = false;
     bool xml = false;
-    string defaultTestSuite = "dunit";
+    string testSuiteName = "dunit";
 
     try
     {
@@ -80,7 +80,7 @@ public int dunit_main(string[] args)
             "verbose|v", "Display more information as the tests are run", &verbose,
             "xml", "Display progressive XML output", &xml,
             "report", "Write JUnit-style XML test report", &report,
-            "defaultTestSuite", "Test suite name to be used in JUnit-style XML test report", &defaultTestSuite,
+            "testsuite", "Provide a test-suite name for the JUnit-style XML test report", &testSuiteName,
             );
     }
     catch (Exception exception)
@@ -169,7 +169,7 @@ public int dunit_main(string[] args)
     }
 
     if (!report.empty)
-        testListeners ~= new ReportReporter(report, defaultTestSuite);
+        testListeners ~= new ReportReporter(report, testSuiteName);
 
     auto reporter = new ResultReporter();
 
@@ -689,12 +689,12 @@ class ReportReporter : TestListener
     private string className;
     private TickDuration startTime;
 
-    public this(string fileName, string defaultTestSuite)
+    public this(string fileName, string testSuiteName)
     {
         this.fileName = fileName;
         this.document = new Document(new Tag("testsuites"));
         this.testSuite = new Element("testsuite");
-        this.testSuite.tag.attr["name"] = defaultTestSuite;
+        this.testSuite.tag.attr["name"] = testSuiteName;
         this.document ~= this.testSuite;
     }
 
