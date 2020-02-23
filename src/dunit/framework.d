@@ -817,42 +817,30 @@ mixin template UnitTest()
         testClass.disabled = _attributeByMember!(typeof(this), Disabled);
         testClass.tags = _attributesByMember!(typeof(this), Tag);
 
-        static Object create()
+        testClass.create = ()
         {
             mixin("return new " ~ typeof(this).stringof ~ "();");
-        }
-
-        static void beforeAll()
+        };
+        testClass.beforeAll = ()
         {
             mixin(_staticSequence(_members!(typeof(this), BeforeAll)));
-        }
-
-        static void beforeEach(Object o)
+        };
+        testClass.beforeEach = (Object o)
         {
             mixin(_sequence(_members!(typeof(this), BeforeEach)));
-        }
-
-        void test(Object o, string name)
+        };
+        testClass.test = (Object o, string name)
         {
             mixin(_choice(_members!(typeof(this), Test)));
-        }
-
-        static void afterEach(Object o)
+        };
+        testClass.afterEach = (Object o)
         {
             mixin(_sequence(_members!(typeof(this), AfterEach)));
-        }
-
-        static void afterAll()
+        };
+        testClass.afterAll = ()
         {
             mixin(_staticSequence(_members!(typeof(this), AfterAll)));
-        }
-
-        testClass.create = &create;
-        testClass.beforeAll = &beforeAll;
-        testClass.beforeEach = &beforeEach;
-        testClass.test = &test;
-        testClass.afterEach = &afterEach;
-        testClass.afterAll = &afterAll;
+        };
 
         testClasses ~= testClass;
     }
