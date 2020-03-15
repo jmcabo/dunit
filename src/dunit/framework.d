@@ -454,8 +454,8 @@ class IssueReporter : TestListener
             {
                 writefln("%d) %s", i + 1,
                     prettyOrigin(issue.testClass, issue.test, issue.phase));
-                writeln(issue.throwable.toString);
-                writeln("----------------");
+                writeln(issue.throwable.description);
+                stdout.lockingTextWriter.description(issue.throwable.info);
             }
         }
 
@@ -470,11 +470,9 @@ class IssueReporter : TestListener
 
             foreach (i, issue; this.failures)
             {
-                Throwable throwable = issue.throwable;
-
                 writefln("%d) %s", i + 1,
                     prettyOrigin(issue.testClass, issue.test, issue.phase));
-                writeln(throwable.description);
+                writeln(issue.throwable.description);
             }
         }
     }
@@ -518,8 +516,8 @@ class DetailReporter : TestListener
     {
         writec(Color.red, "    ERROR: ");
         writeln(prettyOrigin(this.test, phase));
-        writeln("        ", throwable.toString);
-        writeln("----------------");
+        writeln(indent(throwable.description));
+        stdout.lockingTextWriter.description(throwable.info);
     }
 
     public override void exitTest(bool success)

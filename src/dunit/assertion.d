@@ -62,12 +62,33 @@ class AssertAllException : AssertException
  */
 @safe pure nothrow string description(Throwable throwable)
 {
+    import std.path : baseName, buildPath;
+
     with (throwable)
     {
         if (file.empty)
             return text(typeid(throwable).name, ": ", msg);
+        else if (file.baseName == file)  // "foo.d:42" is not rendered as link
+            return text(buildPath(".", file), ":", line, " ", typeid(throwable).name, ": ", msg);
         else
-            return text(typeid(throwable).name, "@", file, "(", line, "): ", msg);
+            return text(file, ":", line, " ", typeid(throwable).name, ": ", msg);
+    }
+}
+
+/**
+ * Writes the optional trace info of a throwable.
+ */
+void description(Output)(auto ref Output output, Throwable.TraceInfo traceInfo)
+{
+    if (traceInfo !is null)
+    {
+        output.put("----------------\n");
+        foreach (line; traceInfo)
+        {
+            output.put(line);
+            output.put("\n");
+        }
+        output.put("----------------\n");
     }
 }
 
