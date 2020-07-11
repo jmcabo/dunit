@@ -611,7 +611,7 @@ class ResultReporter : TestListener
  */
 class XmlReporter : TestListener
 {
-    import std.xml : Document, Element, Tag;
+    import undead.xml : Document, Element, Tag;
 
     private Document testCase;
     private string className;
@@ -678,7 +678,7 @@ class XmlReporter : TestListener
  */
 class ReportReporter : TestListener
 {
-    import std.xml : Document, Element, Tag;
+    import undead.xml : Document, Element, Tag;
 
     private const string fileName;
     private Document document;
