@@ -239,15 +239,15 @@ body
     {
         try
         {
-            static if (__traits(compiles, { import unit_threaded.should : UnitTestException; }))
+            version(Have_dshould)
             {
-                import unit_threaded.should : UnitTestException;
+                import dshould.ShouldType : FluentException;
 
                 try
                 {
                     action();
                 }
-                catch (UnitTestException exception)
+                catch (FluentException exception)
                 {
                     // convert exception to "fix" the message format
                     throw new AssertException('\n' ~ exception.msg,

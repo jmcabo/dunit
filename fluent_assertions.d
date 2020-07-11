@@ -2,10 +2,10 @@
 /+ dub.sdl:
 name "example"
 dependency "d-unit" version=">=0.8.0"
-dependency "unit-threaded" version=">=0.6.35"
+dependency "dshould" version=">=1.3.2"
 +/
 
-//          Copyright Mario Kröplin 2017.
+//          Copyright Mario Kröplin 2020.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
@@ -13,11 +13,11 @@ dependency "unit-threaded" version=">=0.6.35"
 module fluent_assertion;
 
 import dunit;
-import unit_threaded.should;
+import dshould;
 
 /**
  * This example demonstrates the reporting of test failures
- * with unit-threaded's fluent assertions.
+ * with dshould's fluent assertions.
  */
 class Test
 {
@@ -26,19 +26,19 @@ class Test
     @Test
     public void shouldEqualFailure() @safe pure
     {
-        "bar".shouldEqual("baz");
+        "bar".should.equal("baz");
     }
 
     @Test
     public void shouldNotEqualFailure() @safe pure
     {
-        "foo".shouldNotEqual("foo");
+        "foo".should.not.equal("foo");
     }
 
     @Test
     public void shouldBeInFailure() @safe pure
     {
-        42.shouldBeIn([0, 1, 2]);
+        [0, 1, 2].should.contain(42);
     }
 }
 
