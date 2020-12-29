@@ -24,6 +24,12 @@ struct TestClass
     string name;
     string[] tests;
     Disabled[string] disabled;
+    EnabledIf[string] enabledIf;
+    DisabledIf[string] disabledIf;
+    EnabledIfEnvironmentVariable[string] enabledIfEnvVar;
+    DisabledIfEnvironmentVariable[string] disabledIfEnvVar;
+    EnabledOnOs[string] enabledOnOs;
+    DisabledOnOs[string] disabledOnOs;
     Tag[][string] tags;
 
     Object function() create;
@@ -57,7 +63,7 @@ public int dunit_main(string[] args)
 {
     import std.getopt : config, defaultGetoptPrinter, getopt, GetoptResult;
     import std.path : baseName;
-    import std.regex : match;
+    import std.regex : matchFirst;
 
     GetoptResult result;
     string[] filters = null;
@@ -116,7 +122,7 @@ public int dunit_main(string[] args)
                 {
                     string fullyQualifiedName = testClass.name ~ '.' ~ test;
 
-                    if (match(fullyQualifiedName, filter))
+                    if (matchFirst(fullyQualifiedName, filter))
                     {
                         auto foundTestSelections = testSelections.find!"a.testClass.name == b"(testClass.name);
 
@@ -293,9 +299,13 @@ body
                 foreach (testListener; testListeners)
                     testListener.exitTest(success);
 
-            if (test in testClass.disabled || (initialized && !setUp))
+            const disablingCauses = findDisablingCauses(testClass, test);
+
+            if ((initialized && !setUp) || !disablingCauses.empty)
             {
-                string reason = testClass.disabled.get(test, Disabled.init).reason;
+                const reason = (initialized && !setUp)
+                    ? "running @BeforeAll failed for preceding test case"
+                    : disablingCauses.front.reason;
 
                 foreach (testListener; testListeners)
                     testListener.skip(reason);
@@ -342,6 +352,75 @@ body
 
     foreach (testListener; testListeners)
         testListener.exit();
+}
+
+private Disabled[] findDisablingCauses(TestClass testClass, string test)
+{
+    import std.process : environment;
+    import std.regex : regex, matchFirst;
+    import std.system : os, OS;
+
+    Disabled[] disablingCauses;
+
+    if (test in testClass.disabled)
+    {
+        disablingCauses ~= testClass.disabled[test];
+    }
+    if (test in testClass.disabledOnOs) with (testClass.disabledOnOs[test])
+    {
+        if (value.canFind(os))
+        {
+            const reason = format("operating system %s included in %s", os, value);
+
+            disablingCauses ~= Disabled(reason);
+        }
+    }
+    if (test in testClass.enabledOnOs) with (testClass.enabledOnOs[test])
+    {
+        if (!value.canFind(os))
+        {
+            const reason = format("operating system %s not included in %s", os, value);
+
+            disablingCauses ~= Disabled(reason);
+        }
+    }
+    if (test in testClass.disabledIfEnvVar) with (testClass.disabledIfEnvVar[test])
+    {
+        if (environment.get(named) !is null && matchFirst(environment.get(named), regex(matches)))
+        {
+            const reason = format(`value "%s" of environment variable %s matches %s`,
+                    environment.get(named), named, matches);
+
+            disablingCauses ~= Disabled(reason);
+        }
+    }
+    if (test in testClass.enabledIfEnvVar) with (testClass.enabledIfEnvVar[test])
+    {
+        if (environment.get(named) is null)
+        {
+            const reason = format("environment variable %s not set", named);
+
+            disablingCauses ~= Disabled(reason);
+        }
+        else if (!matchFirst(environment.get(named), regex(matches)))
+        {
+            const reason = format(`value "%s" of environment variable %s does not match %s`,
+                    environment.get(named), named, matches);
+
+            disablingCauses ~= Disabled(reason);
+        }
+    }
+    if (test in testClass.disabledIf) with (testClass.disabledIf[test])
+    {
+        if (condition())
+            disablingCauses ~= Disabled(reason);
+    }
+    if (test in testClass.enabledIf) with (testClass.enabledIf[test])
+    {
+        if (!condition())
+            disablingCauses ~= Disabled(reason);
+    }
+    return disablingCauses;
 }
 
 private __gshared TestListener[] testListeners = null;
@@ -813,6 +892,12 @@ mixin template UnitTest()
         testClass.name = this.classinfo.name;
         testClass.tests = _members!(typeof(this), Test);
         testClass.disabled = _attributeByMember!(typeof(this), Disabled);
+        testClass.enabledIf = _attributeByMember!(typeof(this), EnabledIf);
+        testClass.disabledIf = _attributeByMember!(typeof(this), DisabledIf);
+        testClass.enabledIfEnvVar = _attributeByMember!(typeof(this), EnabledIfEnvironmentVariable);
+        testClass.disabledIfEnvVar = _attributeByMember!(typeof(this), DisabledIfEnvironmentVariable);
+        testClass.enabledOnOs = _attributeByMember!(typeof(this), EnabledOnOs);
+        testClass.disabledOnOs = _attributeByMember!(typeof(this), DisabledOnOs);
         testClass.tags = _attributesByMember!(typeof(this), Tag);
 
         testClass.create = ()
