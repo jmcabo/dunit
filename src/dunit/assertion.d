@@ -181,9 +181,10 @@ void assertEquals(T, U)(T expected, U actual, lazy string msg = null,
         size_t line = __LINE__)
     if (isFloatingPoint!T || isFloatingPoint!U)
 {
-    import std.math : approxEqual;
+    import std.math : isClose;
 
-    if (approxEqual(expected, actual))
+    // keep defaults of deprecated approxEqual
+    if (isClose(expected, actual, 1e-2, 1e-5))
         return;
 
     string header = (msg.empty) ? null : msg ~ "; ";

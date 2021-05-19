@@ -1,6 +1,7 @@
-main
-exampleTests
+*.a
 *.o
 *.swp
 *.exe
 .dub
+dub.selections.json
+d-unit
