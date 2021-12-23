@@ -235,11 +235,7 @@ public bool matches(Tag[] tags, string[] choices)
 }
 
 public void runTests(TestSelection[] testSelections, TestListener[] testListeners)
-in
-{
-    assert(all!"a !is null"(testListeners));
-}
-body
+in (testListeners.all!"a !is null")
 {
     bool tryRun(string phase, void delegate() action)
     {
